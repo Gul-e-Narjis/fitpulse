@@ -7,6 +7,7 @@ import '../services/workout_tracker.dart';
 import '../theme/fp_theme.dart';
 import '../theme/fp_widgets.dart';
 import 'exercise_detail.dart';
+import 'share_card_screen.dart';
 
 class WorkoutDetailPage extends StatelessWidget {
   final String category;
@@ -422,6 +423,24 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
           ],
         ),
         actions: [
+          if (saved)
+            TextButton.icon(
+              onPressed: () {
+                final nav = Navigator.of(context);
+                nav.popUntil((route) => route.isFirst);
+                nav.push(
+                  MaterialPageRoute(
+                    builder: (_) => ShareCardScreen(session: session),
+                  ),
+                );
+              },
+              icon: const Icon(
+                Icons.ios_share_rounded,
+                size: 18,
+                color: FpColors.tealLight,
+              ),
+              label: Text('Share', style: FpText.h3(color: FpColors.tealLight)),
+            ),
           TextButton(
             onPressed: () =>
                 Navigator.popUntil(context, (route) => route.isFirst),

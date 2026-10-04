@@ -2,6 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'friends_service.dart';
+import 'gamification.dart';
+
 // ── WorkoutSession model ──────────────────────────────────────────────────────
 class WorkoutSession {
   final String category;
@@ -113,7 +116,9 @@ class BmiRecord {
 }
 
 // ── AppState ──────────────────────────────────────────────────────────────────
-// All user data lives in one Firestore document: users/{uid}.
+// All private user data lives in one Firestore document: users/{uid}.
+// A small public card (name, avatar, level, weekly XP) is mirrored to
+// publicProfiles/{uid} so friends can see it on the leaderboard.
 class AppState extends ChangeNotifier {
   // ── Signed-in user ─────────────────────
   String? _uid;
@@ -126,6 +131,9 @@ class AppState extends ChangeNotifier {
   int _userAge = 25;
   String _fitnessGoal = 'Stay Fit';
   String? _avatarSeed;
+  String _fitnessLevel = 'Beginner';
+  int? _daysPerWeek;
+  bool _onboarded = true;
 
   // ── Workout History ────────────────────
   List<WorkoutSession> _workoutHistory = [];
@@ -143,8 +151,20 @@ class AppState extends ChangeNotifier {
   // ── Notifications ──────────────────────
   bool _notificationsEnabled = true;
 
+  // ── Water (date → glasses) ─────────────
+  Map<String, int> _water = {};
+
+  // ── Gamification ───────────────────────
+  Map<String, String> _badges = {}; // badge id → date earned
+  final List<String> _pendingBadges = []; // earned, not yet celebrated
+
+  // ── Friends ────────────────────────────
+  String? _inviteCode;
+  List<String> _friends = [];
+
   // ── Getters — Profile ──────────────────
   bool get isSignedIn => _uid != null;
+  String? get uid => _uid;
   String get userName => _userName;
   String get userEmail => _userEmail;
   double get userWeight => _userWeight;
@@ -153,6 +173,10 @@ class AppState extends ChangeNotifier {
   String get fitnessGoal => _fitnessGoal;
   // DiceBear seed; falls back to the user's name
   String get avatarSeed => _avatarSeed ?? _userName;
+  String get fitnessLevel => _fitnessLevel;
+  int? get daysPerWeek => _daysPerWeek;
+  int get weeklyGoal => _daysPerWeek ?? 4;
+  bool get needsOnboarding => isSignedIn && !_onboarded;
 
   // ── Getters — History ──────────────────
   List<WorkoutSession> get workoutHistory => _workoutHistory;
@@ -223,9 +247,40 @@ class AppState extends ChangeNotifier {
                 d.month == day.month &&
                 d.day == day.day;
           })
-          .fold(0.0, (total, s) => total + s.durationMinutes);
+          .fold(0.0, (total, s) => total + s.durationSeconds / 60);
     });
   }
+
+  // ── Getters — Gamification ─────────────
+  int get xp => Gamification.totalXp(_workoutHistory);
+  int get weeklyXp => Gamification.weeklyXp(_workoutHistory);
+  int get level => Gamification.levelFor(xp);
+  String get levelName => Gamification.levelName(level);
+  double get levelProgress => Gamification.levelProgress(xp);
+  int get xpToNextLevel => Gamification.xpToNextLevel(xp);
+  Set<String> get earnedBadgeIds => _badges.keys.toSet();
+  String? get pendingBadge =>
+      _pendingBadges.isEmpty ? null : _pendingBadges.first;
+
+  void consumePendingBadge() {
+    if (_pendingBadges.isEmpty) return;
+    _pendingBadges.removeAt(0);
+    notifyListeners();
+  }
+
+  // ── Getters — Water ────────────────────
+  static const glassMl = 250;
+  // ~35 ml per kg of body weight
+  int get waterGoalMl => (_userWeight * 35).round();
+  int get waterGoalGlasses => (waterGoalMl / glassMl).ceil();
+  int glassesOn(DateTime d) => _water[_dateKey(d)] ?? 0;
+  int get todayGlasses => glassesOn(DateTime.now());
+  int get waterGoalDays =>
+      _water.values.where((g) => g >= waterGoalGlasses).length;
+
+  // ── Getters — Friends ──────────────────
+  String? get inviteCode => _inviteCode;
+  List<String> get friends => _friends;
 
   // ── Getters — Planner ──────────────────
   List<PlannedWorkout> get plannedWorkouts => _plannedWorkouts;
@@ -272,6 +327,9 @@ class AppState extends ChangeNotifier {
   DocumentReference<Map<String, dynamic>> get _doc =>
       FirebaseFirestore.instance.collection('users').doc(_uid);
 
+  DocumentReference<Map<String, dynamic>> get _publicDoc =>
+      FirebaseFirestore.instance.collection('publicProfiles').doc(_uid);
+
   // Load users/{uid}; creates the document on first sign-in.
   // Pass [name] right after sign-up: on web the User object returned by
   // createUser doesn't pick up the displayName set afterwards.
@@ -286,15 +344,23 @@ class AppState extends ChangeNotifier {
     if (_uid != user.uid) return; // signed out / switched while loading
     final data = snap.data();
     if (data == null) {
+      // Brand-new account: run onboarding first
+      _onboarded = false;
       await _save();
     } else {
       _applyData(data);
+      // Badges didn't exist before — award what's already earned quietly
+      final hadBadges = data.containsKey('badges');
+      _checkBadges(celebrate: hadBadges);
       // Older documents were created with the placeholder name
       if (_userName == _defaultName && authName != null) {
         _userName = authName;
         await _save();
+      } else if (!hadBadges) {
+        await _save();
       }
     }
+    await _ensurePublicProfile();
     notifyListeners();
   }
 
@@ -304,6 +370,8 @@ class AppState extends ChangeNotifier {
     final t = s?.trim();
     return (t == null || t.isEmpty) ? null : t;
   }
+
+  static String _dateKey(DateTime d) => d.toIso8601String().split('T')[0];
 
   void signOut() {
     _uid = null;
@@ -336,15 +404,57 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Onboarding ─────────────────────────
+  // Saves the answers and replaces any earlier onboarding plan with a fresh
+  // weekly plan for the planner and Home.
+  void completeOnboarding({
+    required String goal,
+    required double heightCm,
+    required double weightKg,
+    required String level,
+    required int daysPerWeek,
+  }) {
+    _fitnessGoal = goal;
+    _userHeight = heightCm;
+    _userWeight = weightKg;
+    _fitnessLevel = level;
+    _daysPerWeek = daysPerWeek;
+    _onboarded = true;
+    _plannedWorkouts.removeWhere((p) => p.id.startsWith('onb-'));
+    _plannedWorkouts.addAll(
+      WeeklyPlanner.build(goal: goal, level: level, daysPerWeek: daysPerWeek),
+    );
+    _save();
+    notifyListeners();
+  }
+
   // ── History ────────────────────────────
   void addWorkoutSession(WorkoutSession session) {
     _workoutHistory.insert(0, session);
+    _checkBadges();
     _save();
     notifyListeners();
   }
 
   void clearHistory() {
     _workoutHistory.clear();
+    _save();
+    notifyListeners();
+  }
+
+  // ── Water ──────────────────────────────
+  void addWater(int glasses) {
+    final key = _dateKey(DateTime.now());
+    final next = ((_water[key] ?? 0) + glasses).clamp(0, 30);
+    _water[key] = next;
+    // Keep the document small: only the last 60 days
+    if (_water.length > 60) {
+      final keys = _water.keys.toList()..sort();
+      for (final k in keys.take(_water.length - 60)) {
+        _water.remove(k);
+      }
+    }
+    _checkBadges();
     _save();
     notifyListeners();
   }
@@ -408,6 +518,22 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Friends ────────────────────────────
+  void setFriends(List<String> uids) {
+    _friends = uids;
+    notifyListeners();
+  }
+
+  // ── Badges ─────────────────────────────
+  void _checkBadges({bool celebrate = true}) {
+    final today = _dateKey(DateTime.now());
+    for (final b in Badges.all) {
+      if (_badges.containsKey(b.id) || !b.earned(this)) continue;
+      _badges[b.id] = today;
+      if (celebrate) _pendingBadges.add(b.id);
+    }
+  }
+
   // ── Save ───────────────────────────────
   Future<void> _save() async {
     if (_uid == null) return;
@@ -420,11 +546,17 @@ class AppState extends ChangeNotifier {
           'height': _userHeight,
           'age': _userAge,
           'goal': _fitnessGoal,
+          'level': _fitnessLevel,
+          if (_daysPerWeek != null) 'daysPerWeek': _daysPerWeek,
           if (_avatarSeed != null) 'avatarSeed': _avatarSeed,
         },
+        'onboarded': _onboarded,
         'stepGoal': _stepGoal,
         'notificationsEnabled': _notificationsEnabled,
         'streak': currentStreak,
+        'xp': xp,
+        'water': _water,
+        'badges': _badges,
         'workoutHistory': _workoutHistory.map((s) => s.toMap()).toList(),
         'plannedWorkouts': _plannedWorkouts.map((p) => p.toMap()).toList(),
         'bmiHistory': _bmiHistory.map((b) => b.toMap()).toList(),
@@ -432,6 +564,48 @@ class AppState extends ChangeNotifier {
       });
     } catch (e) {
       debugPrint('Firestore save failed: $e');
+    }
+    await _publishPublicProfile();
+  }
+
+  // Public card friends can read. Never contains email or health data.
+  Future<void> _publishPublicProfile() async {
+    if (_uid == null || _inviteCode == null) return;
+    try {
+      await _publicDoc.set({
+        'name': _userName,
+        'avatarSeed': avatarSeed,
+        'level': level,
+        'xp': xp,
+        'weeklyXp': weeklyXp,
+        'weekKey': Gamification.weekKey(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Public profile save failed: $e');
+    }
+  }
+
+  // Creates publicProfiles/{uid} with an invite code on first run
+  Future<void> _ensurePublicProfile() async {
+    final uid = _uid;
+    if (uid == null) return;
+    try {
+      final snap = await _publicDoc.get();
+      final data = snap.data();
+      if (data != null && data['inviteCode'] is String) {
+        _inviteCode = data['inviteCode'] as String;
+        _friends = List<String>.from(data['friends'] as List? ?? const []);
+        await _publishPublicProfile();
+        return;
+      }
+      final code = await FriendsService.claimInviteCode(uid);
+      if (_uid != uid) return;
+      _inviteCode = code;
+      await _publicDoc.set({'inviteCode': code, 'friends': <String>[]});
+      await _publishPublicProfile();
+    } catch (e) {
+      debugPrint('Public profile setup failed: $e');
     }
   }
 
@@ -445,6 +619,10 @@ class AppState extends ChangeNotifier {
     _userAge = (profile['age'] as num?)?.toInt() ?? 25;
     _fitnessGoal = profile['goal'] as String? ?? 'Stay Fit';
     _avatarSeed = profile['avatarSeed'] as String?;
+    _fitnessLevel = profile['level'] as String? ?? 'Beginner';
+    _daysPerWeek = (profile['daysPerWeek'] as num?)?.toInt();
+    // Accounts created before onboarding existed skip it
+    _onboarded = data['onboarded'] as bool? ?? true;
     _stepGoal = (data['stepGoal'] as num?)?.toInt() ?? 10000;
     _notificationsEnabled = data['notificationsEnabled'] as bool? ?? true;
     _workoutHistory = _mapList(data['workoutHistory'], WorkoutSession.fromMap);
@@ -453,6 +631,12 @@ class AppState extends ChangeNotifier {
       PlannedWorkout.fromMap,
     );
     _bmiHistory = _mapList(data['bmiHistory'], BmiRecord.fromMap);
+    _water = ((data['water'] as Map?) ?? const {}).map(
+      (k, v) => MapEntry(k as String, (v as num).toInt()),
+    );
+    _badges = ((data['badges'] as Map?) ?? const {}).map(
+      (k, v) => MapEntry(k as String, v.toString()),
+    );
   }
 
   static List<T> _mapList<T>(
@@ -474,11 +658,75 @@ class AppState extends ChangeNotifier {
     _userAge = 25;
     _fitnessGoal = 'Stay Fit';
     _avatarSeed = null;
+    _fitnessLevel = 'Beginner';
+    _daysPerWeek = null;
+    _onboarded = true;
     _workoutHistory = [];
     _plannedWorkouts = [];
     _bmiHistory = [];
     _todaySteps = 0;
     _stepGoal = 10000;
     _notificationsEnabled = true;
+    _water = {};
+    _badges = {};
+    _pendingBadges.clear();
+    _inviteCode = null;
+    _friends = [];
+  }
+}
+
+// ── Weekly plan generator (used by onboarding) ───────────────────────────────
+class WeeklyPlanner {
+  static const _days = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+
+  // Spread training days evenly across the week
+  static const _schedule = {
+    1: [2],
+    2: [0, 3],
+    3: [0, 2, 4],
+    4: [0, 1, 3, 4],
+    5: [0, 1, 2, 4, 5],
+    6: [0, 1, 2, 3, 4, 5],
+    7: [0, 1, 2, 3, 4, 5, 6],
+  };
+
+  static List<String> rotationFor(String goal) {
+    switch (goal) {
+      case 'Lose Weight':
+        return ['Cardio', 'Full Body', 'Core', 'Leg', 'Cardio', 'Arm'];
+      case 'Build Muscle':
+        return ['Arm', 'Leg', 'Full Body', 'Core', 'Arm', 'Leg'];
+      case 'Improve Endurance':
+        return ['Cardio', 'Leg', 'Full Body', 'Cardio', 'Core', 'Arm'];
+      default:
+        return ['Full Body', 'Cardio', 'Core', 'Leg', 'Arm', 'Full Body'];
+    }
+  }
+
+  static List<PlannedWorkout> build({
+    required String goal,
+    required String level,
+    required int daysPerWeek,
+  }) {
+    final days = _schedule[daysPerWeek.clamp(1, 7)]!;
+    final rotation = rotationFor(goal);
+    final time = level == 'Advanced' ? '06:30 AM' : '07:00 AM';
+    return [
+      for (var i = 0; i < days.length; i++)
+        PlannedWorkout(
+          id: 'onb-${days[i]}',
+          category: rotation[i % rotation.length],
+          day: _days[days[i]],
+          time: time,
+        ),
+    ];
   }
 }

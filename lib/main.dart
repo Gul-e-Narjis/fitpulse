@@ -19,6 +19,7 @@ import 'pages/workout_planner.dart';
 import 'pages/step_counter.dart';
 import 'pages/notifications_screen.dart';
 import 'pages/custom_workout.dart';
+import 'pages/onboarding_screen.dart';
 import 'services/exercise_data.dart';
 
 Future<void> main() async {
@@ -41,7 +42,13 @@ Future<void> main() async {
   runApp(
     ChangeNotifierProvider.value(
       value: appState,
-      child: MyApp(initialRoute: signedIn ? '/home' : '/landing'),
+      child: MyApp(
+        initialRoute: !signedIn
+            ? '/landing'
+            : appState.needsOnboarding
+            ? '/onboarding'
+            : '/home',
+      ),
     ),
   );
 }
@@ -70,6 +77,7 @@ class MyApp extends StatelessWidget {
         '/steps': (_) => const StepCounterScreen(),
         '/notifications': (_) => const NotificationsScreen(),
         '/custom': (_) => const CustomWorkoutScreen(),
+        '/onboarding': (_) => const OnboardingScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/workout_detail') {

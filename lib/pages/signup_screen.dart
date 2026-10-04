@@ -72,7 +72,7 @@ class _SignUpScreenState extends State<SignUpScreen>
       // Pass the name explicitly so users/{uid} is created with it
       await appState.loadUser(user, name: _nameCtrl.text);
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (r) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/onboarding', (r) => false);
     } on AuthFailure catch (e) {
       _showError(e.message);
     } catch (e) {

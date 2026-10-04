@@ -5,7 +5,9 @@ import '../services/app_state.dart';
 import '../services/auth_service.dart';
 import '../theme/fp_theme.dart';
 import '../theme/fp_widgets.dart';
+import '../services/gamification.dart';
 import 'bmi_screen.dart';
+import 'gamification_widgets.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -183,6 +185,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       const SizedBox(height: 24),
 
+      // ── Level + badges ──────────────────────────
+      const LevelCard(),
+      const SizedBox(height: 24),
+      SectionTitle(
+        'Badges',
+        action: '${appState.earnedBadgeIds.length}/${Badges.all.length}',
+      ),
+      const SizedBox(height: 12),
+      const BadgesGrid(),
+      const SizedBox(height: 24),
+
       // ── Avatar picker ───────────────────────────
       const SectionTitle('Choose your avatar'),
       const SizedBox(height: 12),
@@ -330,6 +343,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       const SizedBox(height: 28),
 
+      GlowButton(
+        label: 'Rebuild my weekly plan',
+        icon: Icons.auto_awesome_rounded,
+        gradient: LinearGradient(
+          colors: [
+            FpColors.teal.withValues(alpha: 0.25),
+            FpColors.lime.withValues(alpha: 0.10),
+          ],
+        ),
+        textColor: FpColors.text,
+        onTap: () => Navigator.pushNamed(context, '/onboarding'),
+      ),
+      const SizedBox(height: 12),
       // ── Sign out ────────────────────────────────
       GlowButton(
         label: 'Sign out',

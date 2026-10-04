@@ -57,7 +57,11 @@ class _LoginScreenState extends State<LoginScreen>
       );
       await appState.loadUser(user);
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (r) => false);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        appState.needsOnboarding ? '/onboarding' : '/home',
+        (r) => false,
+      );
     } on AuthFailure catch (e) {
       _showSnack(e.message, isError: true);
     } catch (e) {

@@ -62,6 +62,14 @@ void main() {
     await settle(tester);
     expect(find.byType(HomeContent), findsOneWidget);
 
+    // First workout badge is celebrated once back on Home
+    expect(appState.earnedBadgeIds, contains('first_workout'));
+    await settle(tester);
+    expect(find.text('NEW BADGE UNLOCKED'), findsOneWidget);
+    await tester.tap(find.text('Awesome!'));
+    await settle(tester);
+    expect(appState.pendingBadge, isNull);
+
     // History tab lists the completed workout
     await tester.tap(find.text('History'));
     await settle(tester);

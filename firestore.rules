@@ -3,14 +3,63 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Each signed-in user can read/write only their own document
-    // (and anything nested under it). Everything else is denied.
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Private data: each signed-in user can read/write only their own
+    // document and everything nested under it (e.g. coachChats).
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if signedIn() && request.auth.uid == userId;
 
       match /{document=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if signedIn() && request.auth.uid == userId;
       }
+    }
+
+    // Invite code → uid lookup. Codes can be looked up one at a time (no
+    // listing) and a user can only claim a new, unused code for themselves.
+    match /inviteCodes/{code} {
+      allow get: if signedIn();
+      allow create: if signedIn()
+        && code.matches('^[A-Z2-9]{6}$')
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt']);
+    }
+
+    // Public leaderboard card: name, avatar, level and XP only.
+    // Readable by the owner and by people on the owner's friends list.
+    match /publicProfiles/{uid} {
+      function isOwner() {
+        return signedIn() && request.auth.uid == uid;
+      }
+
+      function onlyPublicFields() {
+        return request.resource.data.keys().hasOnly([
+          'name', 'avatarSeed', 'level', 'xp', 'weeklyXp', 'weekKey',
+          'inviteCode', 'friends', 'updatedAt'
+        ]);
+      }
+
+      allow get: if isOwner()
+        || (signedIn() && request.auth.uid in resource.data.friends);
+
+      allow create: if isOwner() && onlyPublicFields();
+
+      allow update: if isOwner() && onlyPublicFields()
+        && (!('inviteCode' in resource.data)
+            || request.resource.data.inviteCode == resource.data.inviteCode);
+
+      // Someone who entered this user's invite code may add exactly
+      // themselves to `friends` and change nothing else.
+      allow update: if signedIn() && !isOwner()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['friends'])
+        && request.resource.data.friends.toSet()
+             .difference(resource.data.friends.toSet())
+             == [request.auth.uid].toSet()
+        && resource.data.friends.toSet()
+             .difference(request.resource.data.friends.toSet()).size() == 0;
     }
   }
 }

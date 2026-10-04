@@ -14,6 +14,10 @@ import 'workout_planner.dart';
 import 'step_counter.dart';
 import 'notifications_screen.dart';
 import 'custom_workout.dart';
+import 'coach_screen.dart';
+import 'gamification_widgets.dart';
+import 'leaderboard_screen.dart';
+import 'water_screen.dart';
 
 // ── Home Wrapper ─────────────────────────────────────────────────────────────
 class Home extends StatefulWidget {
@@ -45,8 +49,10 @@ class _HomeState extends State<Home> {
     return Scaffold(
       backgroundColor: FpColors.bg,
       extendBody: true,
-      body: GradientBackground(
-        child: IndexedStack(index: _currentIndex, children: pages),
+      body: BadgeCelebrator(
+        child: GradientBackground(
+          child: IndexedStack(index: _currentIndex, children: pages),
+        ),
       ),
       bottomNavigationBar: GlassBottomNav(
         index: _currentIndex,
@@ -183,12 +189,24 @@ class HomeContent extends StatelessWidget {
           ),
         ],
       ),
+      const SizedBox(height: 14),
+
+      // ── Level / XP ──────────────────────────────
+      const LevelCard(compact: true),
       const SizedBox(height: 26),
 
       // ── Today's workout hero ────────────────────
       const SectionTitle("Today's workout"),
       const SizedBox(height: 12),
       _TodayHero(appState: appState),
+      const SizedBox(height: 18),
+
+      // ── AI coach ────────────────────────────────
+      _CoachBanner(onTap: () => _push(context, const CoachScreen())),
+      const SizedBox(height: 14),
+
+      // ── Water ───────────────────────────────────
+      const WaterCard(),
       const SizedBox(height: 26),
 
       // ── Quick access ────────────────────────────
@@ -196,6 +214,24 @@ class HomeContent extends StatelessWidget {
       const SizedBox(height: 12),
       _QuickGrid(
         tools: [
+          _QuickToolData(
+            Icons.auto_awesome_rounded,
+            'AI Coach',
+            FpColors.lime,
+            () => _push(context, const CoachScreen()),
+          ),
+          _QuickToolData(
+            Icons.water_drop_rounded,
+            'Water',
+            const Color(0xFF22D3EE),
+            () => _push(context, const WaterScreen()),
+          ),
+          _QuickToolData(
+            Icons.emoji_events_rounded,
+            'Friends',
+            FpColors.amber,
+            () => _push(context, const LeaderboardScreen()),
+          ),
           _QuickToolData(
             Icons.insights_rounded,
             'Progress',
@@ -310,7 +346,7 @@ class _ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const weeklyGoal = 4;
+    final weeklyGoal = appState.weeklyGoal;
     final weekly = appState.weeklyWorkouts;
     final streak = appState.currentStreak;
     final todayMinutes = appState.last7DaysMinutes.last;
@@ -993,6 +1029,65 @@ class _MotivationCard extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── AI coach banner ───────────────────────────────────────────────────────────
+class _CoachBanner extends StatelessWidget {
+  final VoidCallback onTap;
+  const _CoachBanner({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      onTap: onTap,
+      glow: FpColors.violet,
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          FpColors.violet.withValues(alpha: 0.28),
+          FpColors.teal.withValues(alpha: 0.10),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: SweepGradient(
+                colors: [
+                  FpColors.teal,
+                  FpColors.lime,
+                  FpColors.violet,
+                  FpColors.teal,
+                ],
+              ),
+            ),
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              color: FpColors.bgDeep,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Ask Pulse, your AI coach', style: FpText.h3()),
+                Text(
+                  'Plans, form tips and motivation — tailored to you',
+                  style: FpText.muted(size: 12),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: FpColors.muted),
         ],
       ),
     );
