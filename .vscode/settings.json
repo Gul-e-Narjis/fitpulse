@@ -1,0 +1,4 @@
+{
+  // Gradle 8.12 can't compile build scripts on JDK 24 (JAVA_HOME). Use the JDK 21 Flutter uses.
+  "java.import.gradle.java.home": "C:\\Program Files\\Android\\Android Studio\\jbr"
+}
