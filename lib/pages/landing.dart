@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_colors.dart';
 
 class LandingPage extends StatelessWidget {
   const LandingPage({super.key});
@@ -6,7 +7,7 @@ class LandingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D7A7E),
+      backgroundColor: AppColors.darkTeal,
       body: Stack(
         children: [
           // ── Background decorative circles ───────────
@@ -54,86 +55,88 @@ class LandingPage extends StatelessWidget {
                 // Top section (teal bg)
                 Expanded(
                   flex: 5,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 28),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Logo icon
-                        Container(
-                          width: 90,
-                          height: 90,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.15),
-                                blurRadius: 24,
-                                offset: const Offset(0, 8),
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 28),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Logo icon
+                          Container(
+                            width: 90,
+                            height: 90,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.monitor_heart_rounded,
+                              size: 44,
+                              color: AppColors.sageGreen,
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // App name
+                          const Text(
+                            'FITPULSE',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 30,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Your Personal Fitness Companion 💪',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.75),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+
+                          const SizedBox(height: 48),
+
+                          // Feature chips
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            alignment: WrapAlignment.center,
+                            children: const [
+                              _FeatureChip(
+                                icon: Icons.timer_outlined,
+                                label: 'Workout Timer',
+                              ),
+                              _FeatureChip(
+                                icon: Icons.bar_chart_rounded,
+                                label: 'Progress Charts',
+                              ),
+                              _FeatureChip(
+                                icon: Icons.calendar_month_rounded,
+                                label: 'Workout Planner',
+                              ),
+                              _FeatureChip(
+                                icon: Icons.directions_walk_rounded,
+                                label: 'Step Counter',
+                              ),
+                              _FeatureChip(
+                                icon: Icons.calculate_outlined,
+                                label: 'BMI Calculator',
                               ),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.monitor_heart_rounded,
-                            size: 44,
-                            color: Color(0xFF1E9FA3),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // App name
-                        const Text(
-                          'FITPULSE',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Your Personal Fitness Companion 💪',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.75),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-
-                        const SizedBox(height: 48),
-
-                        // Feature chips
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          alignment: WrapAlignment.center,
-                          children: const [
-                            _FeatureChip(
-                              icon: Icons.timer_outlined,
-                              label: 'Workout Timer',
-                            ),
-                            _FeatureChip(
-                              icon: Icons.bar_chart_rounded,
-                              label: 'Progress Charts',
-                            ),
-                            _FeatureChip(
-                              icon: Icons.calendar_month_rounded,
-                              label: 'Workout Planner',
-                            ),
-                            _FeatureChip(
-                              icon: Icons.directions_walk_rounded,
-                              label: 'Step Counter',
-                            ),
-                            _FeatureChip(
-                              icon: Icons.calculate_outlined,
-                              label: 'BMI Calculator',
-                            ),
-                          ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -141,7 +144,7 @@ class LandingPage extends StatelessWidget {
                 // Bottom white card
                 Container(
                   decoration: const BoxDecoration(
-                    color: Color(0xFFF4F8F7),
+                    color: AppColors.background,
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(36),
                       topRight: Radius.circular(36),
@@ -156,7 +159,7 @@ class LandingPage extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A2E2E),
+                          color: AppColors.textDark,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -178,7 +181,7 @@ class LandingPage extends StatelessWidget {
                           onPressed: () =>
                               Navigator.pushNamed(context, '/signup'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1E9FA3),
+                            backgroundColor: AppColors.sageGreen,
                             foregroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
@@ -212,9 +215,9 @@ class LandingPage extends StatelessWidget {
                           onPressed: () =>
                               Navigator.pushNamed(context, '/login'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF1E9FA3),
+                            foregroundColor: AppColors.sageGreen,
                             side: const BorderSide(
-                              color: Color(0xFF1E9FA3),
+                              color: AppColors.sageGreen,
                               width: 2,
                             ),
                             shape: RoundedRectangleBorder(

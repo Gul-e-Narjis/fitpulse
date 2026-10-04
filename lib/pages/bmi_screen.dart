@@ -1,7 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../services/app_state.dart';
-import 'app_colors.dart';
+import '../theme/fp_theme.dart';
+import '../theme/fp_widgets.dart';
 
 class BMIScreen extends StatefulWidget {
   const BMIScreen({super.key});
@@ -15,6 +19,11 @@ class _BMIScreenState extends State<BMIScreen> {
   final _heightController = TextEditingController();
   double? _bmi;
   bool _calculated = false;
+
+  static const _underColor = FpColors.sky;
+  static const _normalColor = FpColors.lime;
+  static const _overColor = FpColors.amber;
+  static const _obeseColor = FpColors.coral;
 
   @override
   void initState() {
@@ -37,11 +46,7 @@ class _BMIScreenState extends State<BMIScreen> {
 
     if (weight == null || height == null || height == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter valid weight and height!'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('Please enter valid weight and height!')),
       );
       return;
     }
@@ -64,11 +69,11 @@ class _BMIScreenState extends State<BMIScreen> {
   }
 
   Color get _categoryColor {
-    if (_bmi == null) return AppColors.sageGreen;
-    if (_bmi! < 18.5) return Colors.blue;
-    if (_bmi! < 25.0) return AppColors.sageGreen;
-    if (_bmi! < 30.0) return const Color(0xFFE8956D);
-    return Colors.red;
+    if (_bmi == null) return FpColors.teal;
+    if (_bmi! < 18.5) return _underColor;
+    if (_bmi! < 25.0) return _normalColor;
+    if (_bmi! < 30.0) return _overColor;
+    return _obeseColor;
   }
 
   String get _advice {
@@ -87,212 +92,243 @@ class _BMIScreenState extends State<BMIScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bmi = _bmi;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: FpColors.bg,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        title: const Text(
-          'BMI Calculator',
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: const Text('BMI Calculator'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textDark),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Info Card ──────────────────────────
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.softGreen,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.sageGreen.withValues(alpha: 0.3)),
-              ),
-              child: Row(
+      extendBodyBehindAppBar: true,
+      body: GradientBackground(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 30),
+            children: [
+              // ── Gauge ───────────────────────────────
+              GlassCard(
+                glow: _categoryColor,
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
+                child: Column(
+                  children: [
+                    _BmiGauge(value: bmi),
+                    const SizedBox(height: 4),
+                    if (bmi != null) ...[
+                      CountUp(
+                        value: bmi,
+                        decimals: 1,
+                        style: FpText.display(size: 44),
+                      ),
+                      const SizedBox(height: 6),
+                      AnimatedContainer(
+                        duration: 400.ms,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _categoryColor.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: _categoryColor.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Text(
+                          _category,
+                          style: FpText.h3(color: _categoryColor),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _advice,
+                        textAlign: TextAlign.center,
+                        style: FpText.muted(),
+                      ),
+                    ] else
+                      Text(
+                        'Enter your details and tap Calculate',
+                        style: FpText.muted(),
+                      ),
+                  ],
+                ),
+              ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.06),
+              const SizedBox(height: 24),
+
+              // ── Inputs ──────────────────────────────
+              const SectionTitle('Your details'),
+              const SizedBox(height: 12),
+              Row(
                 children: [
-                  const Icon(
-                    Icons.info_outline,
-                    color: AppColors.sageGreen,
-                    size: 20,
+                  Expanded(
+                    child: _InputField(
+                      label: 'Weight',
+                      unit: 'kg',
+                      controller: _weightController,
+                      icon: Icons.monitor_weight_outlined,
+                      hint: 'e.g. 65',
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'BMI measures body fat based on height and weight. Enter your details below.',
-                      style: TextStyle(
-                        color: AppColors.sageGreen,
-                        fontSize: 13,
-                      ),
+                  Expanded(
+                    child: _InputField(
+                      label: 'Height',
+                      unit: 'cm',
+                      controller: _heightController,
+                      icon: Icons.height,
+                      hint: 'e.g. 165',
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 28),
-
-            // ── Input Fields ────────────────────────
-            const Text(
-              'Your Details',
-              style: TextStyle(
-                color: AppColors.textDark,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              const SizedBox(height: 18),
+              GlowButton(
+                label: 'Calculate BMI',
+                icon: Icons.speed_rounded,
+                onTap: _calculate,
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 26),
 
-            _InputField(
-              label: 'Weight',
-              unit: 'kg',
-              controller: _weightController,
-              icon: Icons.monitor_weight_outlined,
-              hint: 'e.g. 65',
-            ),
-            const SizedBox(height: 14),
-            _InputField(
-              label: 'Height',
-              unit: 'cm',
-              controller: _heightController,
-              icon: Icons.height,
-              hint: 'e.g. 165',
-            ),
-            const SizedBox(height: 28),
-
-            // ── Calculate Button ────────────────────
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _calculate,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.sageGreen,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 54),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: const Text(
-                  'Calculate BMI',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            const SizedBox(height: 28),
-
-            // ── Result ──────────────────────────────
-            if (_calculated && _bmi != null) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [_categoryColor, _categoryColor.withValues(alpha: 0.6)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Your BMI',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _bmi!.toStringAsFixed(1),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 64,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        _category,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _advice,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // ── BMI Scale ──────────────────────────
-              const Text(
-                'BMI Scale',
-                style: TextStyle(
-                  color: AppColors.textDark,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 14),
+              // ── Scale ───────────────────────────────
+              const SectionTitle('BMI scale'),
+              const SizedBox(height: 12),
               _BMIScaleCard(
                 label: 'Underweight',
                 range: '< 18.5',
-                color: Colors.blue,
-                isActive: _bmi! < 18.5,
+                color: _underColor,
+                isActive: _calculated && bmi! < 18.5,
               ),
-              const SizedBox(height: 8),
               _BMIScaleCard(
                 label: 'Normal',
-                range: '18.5 - 24.9',
-                color: AppColors.sageGreen,
-                isActive: _bmi! >= 18.5 && _bmi! < 25,
+                range: '18.5 – 24.9',
+                color: _normalColor,
+                isActive: _calculated && bmi! >= 18.5 && bmi < 25,
               ),
-              const SizedBox(height: 8),
               _BMIScaleCard(
                 label: 'Overweight',
-                range: '25.0 - 29.9',
-                color: const Color(0xFFE8956D),
-                isActive: _bmi! >= 25 && _bmi! < 30,
+                range: '25.0 – 29.9',
+                color: _overColor,
+                isActive: _calculated && bmi! >= 25 && bmi < 30,
               ),
-              const SizedBox(height: 8),
               _BMIScaleCard(
                 label: 'Obese',
                 range: '≥ 30.0',
-                color: Colors.red,
-                isActive: _bmi! >= 30,
+                color: _obeseColor,
+                isActive: _calculated && bmi! >= 30,
               ),
             ],
-            const SizedBox(height: 30),
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+// ── Needle gauge (BMI 15 → 40) ────────────────────────────────────────────────
+class _BmiGauge extends StatelessWidget {
+  final double? value;
+  const _BmiGauge({required this.value});
+
+  static const minBmi = 15.0;
+  static const maxBmi = 40.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final target =
+        ((value ?? minBmi).clamp(minBmi, maxBmi) - minBmi) / (maxBmi - minBmi);
+    return LayoutBuilder(
+      builder: (context, c) {
+        final width = math.min(c.maxWidth, 300.0);
+        return SizedBox(
+          width: width,
+          height: width * 0.58,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: target),
+            duration: const Duration(milliseconds: 1600),
+            curve: Curves.elasticOut,
+            builder: (context, t, _) =>
+                CustomPaint(painter: _GaugePainter(t.clamp(-0.02, 1.02))),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _GaugePainter extends CustomPainter {
+  final double t; // 0..1 along the arc
+  _GaugePainter(this.t);
+
+  static double _frac(double bmi) =>
+      (bmi - _BmiGauge.minBmi) / (_BmiGauge.maxBmi - _BmiGauge.minBmi);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height * 0.92);
+    final radius = size.width / 2 - 14;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    const stroke = 16.0;
+
+    final segments = [
+      (0.0, _frac(18.5), FpColors.sky),
+      (_frac(18.5), _frac(25), FpColors.lime),
+      (_frac(25), _frac(30), FpColors.amber),
+      (_frac(30), 1.0, FpColors.coral),
+    ];
+    for (final (from, to, color) in segments) {
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..color = color.withValues(alpha: 0.85);
+      canvas.drawArc(
+        rect,
+        math.pi + math.pi * from + 0.012,
+        math.pi * (to - from) - 0.024,
+        false,
+        paint,
+      );
+    }
+
+    // Tick labels
+    for (final bmi in [18.5, 25.0, 30.0]) {
+      final a = math.pi + math.pi * _frac(bmi);
+      final p = center + Offset(math.cos(a), math.sin(a)) * (radius - 28);
+      final tp = TextPainter(
+        text: TextSpan(
+          text: bmi.toStringAsFixed(bmi % 1 == 0 ? 0 : 1),
+          style: FpText.label(size: 10),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, p - Offset(tp.width / 2, tp.height / 2));
+    }
+
+    // Needle
+    final angle = math.pi + math.pi * t;
+    final tip =
+        center + Offset(math.cos(angle), math.sin(angle)) * (radius - 4);
+    final needle = Paint()
+      ..color = FpColors.text
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      center,
+      tip,
+      Paint()
+        ..color = FpColors.teal.withValues(alpha: 0.5)
+        ..strokeWidth = 10
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+    );
+    canvas.drawLine(center, tip, needle);
+    canvas.drawCircle(center, 10, Paint()..color = FpColors.text);
+    canvas.drawCircle(center, 5, Paint()..color = FpColors.teal);
+  }
+
+  @override
+  bool shouldRepaint(_GaugePainter old) => old.t != t;
 }
 
 class _InputField extends StatelessWidget {
@@ -312,32 +348,19 @@ class _InputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: TextInputType.number,
-        style: const TextStyle(color: AppColors.textDark, fontSize: 16),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: AppColors.textGrey),
-          hintText: hint,
-          hintStyle: const TextStyle(color: AppColors.textGrey),
-          prefixIcon: Icon(icon, color: AppColors.sageGreen, size: 22),
-          suffixText: unit,
-          suffixStyle: const TextStyle(
-            color: AppColors.sageGreen,
-            fontWeight: FontWeight.bold,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
-          ),
+    return TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      style: FpText.h3(),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, color: FpColors.tealLight, size: 20),
+        suffixText: unit,
+        suffixStyle: FpText.label(color: FpColors.lime, size: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 16,
         ),
       ),
     );
@@ -359,14 +382,18 @@ class _BMIScaleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 350),
+      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isActive ? color.withValues(alpha: 0.12) : AppColors.card,
-        borderRadius: BorderRadius.circular(12),
+        color: isActive
+            ? color.withValues(alpha: 0.12)
+            : Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isActive ? color : AppColors.border,
-          width: isActive ? 2 : 1,
+          color: isActive ? color : FpColors.border,
+          width: isActive ? 1.6 : 1,
         ),
       ),
       child: Row(
@@ -374,25 +401,28 @@ class _BMIScaleCard extends StatelessWidget {
           Container(
             width: 12,
             height: 12,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 8),
+              ],
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               label,
-              style: TextStyle(
-                color: isActive ? AppColors.textDark : AppColors.textGrey,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                fontSize: 14,
-              ),
+              style: isActive
+                  ? FpText.h3()
+                  : FpText.body(color: FpColors.muted),
             ),
           ),
           Text(
             range,
-            style: TextStyle(
-              color: isActive ? color : AppColors.textGrey,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              fontSize: 13,
+            style: FpText.label(
+              color: isActive ? color : FpColors.muted,
+              size: 12,
             ),
           ),
           if (isActive) ...[

@@ -224,7 +224,9 @@ class _StepCounterScreenState extends State<StepCounterScreen>
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: Colors.orange.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Text(
                   '⚠️ $_errorMsg — showing estimated data',
@@ -527,10 +529,12 @@ class _MilestoneSection extends StatelessWidget {
                       '${m['label']} (${target.toString()} steps)',
                       style: TextStyle(
                         fontSize: 13,
-                        color:
-                            reached ? AppColors.textDark : AppColors.textGrey,
-                        fontWeight:
-                            reached ? FontWeight.w600 : FontWeight.normal,
+                        color: reached
+                            ? AppColors.textDark
+                            : AppColors.textGrey,
+                        fontWeight: reached
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                       ),
                     ),
                   ),

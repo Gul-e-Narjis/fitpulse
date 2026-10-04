@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+import 'theme/fp_theme.dart';
 import 'services/app_state.dart';
 import 'pages/landing.dart';
 import 'pages/login.dart';
@@ -54,25 +55,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'FitPulse — Fitness Tracker',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: const ColorScheme.light(
-          primary: Color(0xFF1E9FA3),
-          secondary: Color(0xFFB39DDB),
-          surface: Color(0xFFFFFFFF),
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF4F8F7),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFF4F8F7),
-          elevation: 0,
-          iconTheme: IconThemeData(color: Color(0xFF1A2E2E)),
-          titleTextStyle: TextStyle(
-            color: Color(0xFF1A2E2E),
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+      theme: FpTheme.dark(),
       initialRoute: initialRoute,
       routes: {
         '/landing': (_) => const LandingPage(),

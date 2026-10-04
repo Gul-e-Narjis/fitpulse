@@ -128,7 +128,9 @@ class _LoginScreenState extends State<LoginScreen>
     }
     try {
       await AuthService.sendPasswordReset(email);
-      _showSnack('If an account exists for $email, a reset link has been sent.');
+      _showSnack(
+        'If an account exists for $email, a reset link has been sent.',
+      );
     } on AuthFailure catch (e) {
       _showSnack(e.message, isError: true);
     }
@@ -137,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D7A7E),
+      backgroundColor: AppColors.darkTeal,
       body: Stack(
         children: [
           // Decorative circles
@@ -189,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen>
                             child: const Icon(
                               Icons.fitness_center_rounded,
                               size: 36,
-                              color: Color(0xFF1E9FA3),
+                              color: AppColors.sageGreen,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -220,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen>
                   flex: 7,
                   child: Container(
                     decoration: const BoxDecoration(
-                      color: Color(0xFFF4F8F7),
+                      color: AppColors.background,
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(36),
                         topRight: Radius.circular(36),
@@ -238,7 +240,7 @@ class _LoginScreenState extends State<LoginScreen>
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1A2E2E),
+                                color: AppColors.textDark,
                               ),
                             ),
                             const SizedBox(height: 24),

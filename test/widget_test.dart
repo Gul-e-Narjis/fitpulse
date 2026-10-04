@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'package:fit_pulse/pages/home.dart';
@@ -8,6 +9,8 @@ import 'package:fit_pulse/services/app_state.dart';
 import 'package:fit_pulse/services/exercise_data.dart';
 
 void main() {
+  GoogleFonts.config.allowRuntimeFetching = false;
+
   testWidgets('Only time actually exercised is recorded', (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -21,16 +24,16 @@ void main() {
         child: MaterialApp(navigatorKey: navKey, home: const Home()),
       ),
     );
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     final category = ExerciseDataService.categories.first;
     final exercises = ExerciseDataService.getByCategory(category);
     navKey.currentState!.push(
       MaterialPageRoute(builder: (_) => WorkoutDetailPage(category: category)),
     );
-    await tester.pumpAndSettle();
+    await settle(tester);
     await tester.tap(find.text('Start Workout'));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // Do the first two exercises for real, skip the rest
     var expectedSeconds = 0;
@@ -41,11 +44,11 @@ void main() {
       for (var s = 0; s <= secs; s++) {
         await tester.pump(const Duration(seconds: 1));
       }
-      await tester.pumpAndSettle();
+      await settle(tester);
     }
     for (var i = 2; i < exercises.length; i++) {
       await tester.tap(find.text('Skip'));
-      await tester.pumpAndSettle();
+      await settle(tester);
     }
 
     expect(find.text('🎉 Workout Complete!'), findsOneWidget);
@@ -56,12 +59,19 @@ void main() {
     expect(session.partial, isFalse);
 
     await tester.tap(find.text('Back to Home'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.byType(HomeContent), findsOneWidget);
 
     // History tab lists the completed workout
     await tester.tap(find.text('History'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.text('$category Workout'), findsWidgets);
   });
+}
+
+// The UI has looping animations, so pumpAndSettle would never finish
+Future<void> settle(WidgetTester tester) async {
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 }

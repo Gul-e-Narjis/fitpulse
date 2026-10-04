@@ -282,7 +282,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             24 + MediaQuery.of(ctx).viewInsets.bottom,
           ),
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.card,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
@@ -384,8 +384,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color:
-                            isSel ? AppColors.sageGreen : AppColors.background,
+                        color: isSel
+                            ? AppColors.sageGreen
+                            : AppColors.background,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: isSel ? AppColors.sageGreen : AppColors.border,
@@ -407,12 +408,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: selectedDays.isEmpty ||
+                  onPressed:
+                      selectedDays.isEmpty ||
                           titleController.text.trim().isEmpty
                       ? null
                       : () {
                           final newReminder = _WorkoutReminder(
-                            id: existing?.id ??
+                            id:
+                                existing?.id ??
                                 DateTime.now().millisecondsSinceEpoch,
                             title: titleController.text.trim(),
                             time: selectedTime,
@@ -540,8 +543,9 @@ class _ReminderCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color:
-                            isActive ? AppColors.sageGreen : AppColors.textGrey,
+                        color: isActive
+                            ? AppColors.sageGreen
+                            : AppColors.textGrey,
                       ),
                     ),
                   ],
@@ -641,7 +645,7 @@ class _PresetGrid extends StatelessWidget {
       time: TimeOfDay(hour: 6, minute: 30),
       days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
       icon: Icons.directions_run,
-      color: Color(0xFF1E9FA3),
+      color: AppColors.sageGreen,
     ),
     _Preset(
       title: 'Lunch Workout',
@@ -771,16 +775,20 @@ class _NotificationTips extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E9FA3).withValues(alpha: 0.06),
+        color: AppColors.sageGreen.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E9FA3).withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.sageGreen.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(
             children: [
-              Icon(Icons.lightbulb_outline, color: Color(0xFF1E9FA3), size: 18),
+              Icon(
+                Icons.lightbulb_outline,
+                color: AppColors.sageGreen,
+                size: 18,
+              ),
               SizedBox(width: 8),
               Text(
                 'Tips for staying consistent',

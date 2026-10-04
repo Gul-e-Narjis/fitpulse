@@ -218,7 +218,8 @@ class _CustomWorkoutScreenState extends State<CustomWorkoutScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    runSpacing: 8,
                     children: _difficulties.map((d) {
                       final sel = d == _filterDifficulty;
                       Color dColor = d == 'Beginner'
@@ -331,7 +332,10 @@ class _CustomWorkoutScreenState extends State<CustomWorkoutScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Row(
+                                  Wrap(
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    runSpacing: 4,
                                     children: [
                                       Container(
                                         padding: const EdgeInsets.symmetric(
@@ -339,7 +343,9 @@ class _CustomWorkoutScreenState extends State<CustomWorkoutScreen> {
                                           vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: diffColor.withValues(alpha: 0.1),
+                                          color: diffColor.withValues(
+                                            alpha: 0.1,
+                                          ),
                                           borderRadius: BorderRadius.circular(
                                             8,
                                           ),

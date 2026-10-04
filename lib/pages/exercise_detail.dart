@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../services/exercise_data.dart';
-import 'app_colors.dart';
+import '../theme/fp_theme.dart';
+import '../theme/fp_widgets.dart';
+import 'workout_detail.dart';
 
 class ExerciseDetailPage extends StatelessWidget {
   final Exercise exercise;
@@ -9,77 +12,203 @@ class ExerciseDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = ExerciseDataService.getCategoryColor(exercise.category);
+    final color = FpColors.forCategory(exercise.category);
+    final steps = exercise.steps;
+    final benefits = exercise.benefits
+        .split('\n')
+        .map((b) => b.replaceFirst(RegExp(r'^[•\-\s]+'), '').trim())
+        .where((b) => b.isNotEmpty)
+        .toList();
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          // ── Header ────────────────────────────────
-          SliverAppBar(
-            expandedHeight: 200,
-            pinned: true,
-            backgroundColor: AppColors.background,
-            leading: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.arrow_back_ios_new,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
+    final sections = <Widget>[
+      // ── Title + chips ───────────────────────────
+      Text(exercise.name, style: FpText.display(size: 28)),
+      const SizedBox(height: 10),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          DifficultyChip(exercise.difficulty),
+          _Chip(Icons.category_outlined, exercise.category, color),
+        ],
+      ),
+      const SizedBox(height: 18),
+      Row(
+        children: [
+          Expanded(
+            child: _StatTile(
+              icon: Icons.timer_outlined,
+              label: 'Duration',
+              value: exercise.duration,
+              color: FpColors.sky,
             ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [color, color.withValues(alpha: 0.6)],
-                  ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _StatTile(
+              icon: Icons.repeat_rounded,
+              label: 'Reps',
+              value: exercise.reps,
+              color: FpColors.lime,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 22),
+
+      // ── How to do it ────────────────────────────
+      const SectionTitle('How to do it'),
+      const SizedBox(height: 12),
+      GlassCard(
+        child: Column(
+          children: [
+            for (var i = 0; i < steps.length; i++)
+              Padding(
+                padding: EdgeInsets.only(
+                  bottom: i == steps.length - 1 ? 0 : 14,
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 40),
                     Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(exercise.icon, size: 44, color: Colors.white),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      exercise.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
+                      width: 28,
+                      height: 28,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: FpColors.accentGradient,
                       ),
                       child: Text(
-                        exercise.difficulty,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
+                        '${i + 1}',
+                        style: FpText.label(color: FpColors.bgDeep, size: 12),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(steps[i], style: FpText.body()),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 22),
+
+      // ── About ───────────────────────────────────
+      const SectionTitle('About'),
+      const SizedBox(height: 12),
+      GlassCard(
+        child: Text(
+          exercise.description,
+          style: FpText.body(color: FpColors.muted),
+        ),
+      ),
+      const SizedBox(height: 22),
+
+      // ── Muscles + equipment ─────────────────────
+      const SectionTitle('Muscles targeted'),
+      const SizedBox(height: 12),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: exercise.musclesTargeted
+            .split(',')
+            .map((m) => _Chip(Icons.bolt_rounded, m.trim(), FpColors.tealLight))
+            .toList(),
+      ),
+      const SizedBox(height: 22),
+      const SectionTitle('Equipment'),
+      const SizedBox(height: 12),
+      GlassCard(
+        child: Row(
+          children: [
+            const TintIcon(
+              Icons.fitness_center_rounded,
+              color: FpColors.violet,
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text(exercise.equipment, style: FpText.body())),
+          ],
+        ),
+      ),
+      const SizedBox(height: 22),
+
+      // ── Benefits ────────────────────────────────
+      const SectionTitle('Benefits'),
+      const SizedBox(height: 12),
+      GlassCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final b in benefits)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      size: 18,
+                      color: FpColors.lime,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(b, style: FpText.body())),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    ];
+
+    return Scaffold(
+      backgroundColor: FpColors.bg,
+      body: GradientBackground(
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 320,
+              pinned: true,
+              backgroundColor: FpColors.bg,
+              surfaceTintColor: Colors.transparent,
+              leading: Padding(
+                padding: const EdgeInsets.all(8),
+                child: GlassCard(
+                  padding: EdgeInsets.zero,
+                  radius: 14,
+                  onTap: () => Navigator.pop(context),
+                  child: const Center(
+                    child: Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: FpColors.text,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Hero(
+                      tag: 'ex-${exercise.name}',
+                      child: ExerciseImage(
+                        exercise: exercise,
+                        animate: true,
+                        radius: 0,
+                      ),
+                    ),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, FpColors.bg],
+                          stops: [0.55, 1],
                         ),
                       ),
                     ),
@@ -87,218 +216,17 @@ class ExerciseDetailPage extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-
-          // ── Quick Stats ────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  _StatChip(
-                    icon: Icons.timer_outlined,
-                    label: 'Duration',
-                    value: exercise.duration,
-                    color: color,
-                  ),
-                  const SizedBox(width: 12),
-                  _StatChip(
-                    icon: Icons.repeat,
-                    label: 'Reps',
-                    value: exercise.reps,
-                    color: AppColors.lightPurple,
-                  ),
-                ],
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  for (var i = 0; i < sections.length; i++)
+                    sections[i]
+                        .animate()
+                        .fadeIn(delay: (25 * i).ms, duration: 400.ms)
+                        .slideY(begin: 0.08),
+                ]),
               ),
-            ),
-          ),
-
-          // ── About ──────────────────────────────────
-          SliverToBoxAdapter(
-            child: _Section(
-              title: 'About',
-              icon: Icons.info_outline,
-              color: color,
-              child: Text(
-                exercise.description,
-                style: const TextStyle(
-                  color: AppColors.textGrey,
-                  fontSize: 14,
-                  height: 1.6,
-                ),
-              ),
-            ),
-          ),
-
-          // ── Muscles ────────────────────────────────
-          SliverToBoxAdapter(
-            child: _Section(
-              title: 'Muscles Targeted',
-              icon: Icons.accessibility_new,
-              color: color,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: exercise.musclesTargeted
-                    .split(',')
-                    .map(
-                      (m) => Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: color.withValues(alpha: 0.3)),
-                        ),
-                        child: Text(
-                          m.trim(),
-                          style: TextStyle(color: color, fontSize: 12),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
-          ),
-
-          // ── Equipment ──────────────────────────────
-          SliverToBoxAdapter(
-            child: _Section(
-              title: 'Equipment',
-              icon: Icons.fitness_center,
-              color: color,
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    color: AppColors.sageGreen,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    exercise.equipment,
-                    style: const TextStyle(
-                      color: AppColors.textGrey,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Instructions ───────────────────────────
-          SliverToBoxAdapter(
-            child: _Section(
-              title: 'How To Do It',
-              icon: Icons.format_list_numbered,
-              color: color,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: exercise.instructions
-                    .split('\n')
-                    .map(
-                      (step) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Text(
-                          step,
-                          style: const TextStyle(
-                            color: AppColors.textGrey,
-                            fontSize: 14,
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
-          ),
-
-          // ── Benefits ───────────────────────────────
-          SliverToBoxAdapter(
-            child: _Section(
-              title: 'Benefits',
-              icon: Icons.star_outline,
-              color: color,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: exercise.benefits
-                    .split('\n')
-                    .map(
-                      (b) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text(
-                          b,
-                          style: const TextStyle(
-                            color: AppColors.textGrey,
-                            fontSize: 14,
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
-          ),
-
-          const SliverToBoxAdapter(child: SizedBox(height: 30)),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Stat Chip ────────────────────────────────────────
-class _StatChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  const _StatChip({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: AppColors.textGrey,
-                    fontSize: 11,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: AppColors.textDark,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -307,49 +235,68 @@ class _StatChip extends StatelessWidget {
   }
 }
 
-// ── Section ──────────────────────────────────────────
-class _Section extends StatelessWidget {
-  final String title;
+class _Chip extends StatelessWidget {
   final IconData icon;
+  final String text;
   final Color color;
-  final Widget child;
-
-  const _Section({
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.child,
-  });
+  const _Chip(this.icon, this.text, this.color);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: AppColors.textDark,
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(text, style: FpText.label(color: color, size: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _StatTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          TintIcon(icon, color: color, size: 38),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: FpText.label()),
+                Text(
+                  value,
+                  style: FpText.h3(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 14),
-          child,
         ],
       ),
     );

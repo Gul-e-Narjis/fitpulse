@@ -125,6 +125,7 @@ class AppState extends ChangeNotifier {
   double _userHeight = 170.0;
   int _userAge = 25;
   String _fitnessGoal = 'Stay Fit';
+  String? _avatarSeed;
 
   // ── Workout History ────────────────────
   List<WorkoutSession> _workoutHistory = [];
@@ -150,6 +151,8 @@ class AppState extends ChangeNotifier {
   double get userHeight => _userHeight;
   int get userAge => _userAge;
   String get fitnessGoal => _fitnessGoal;
+  // DiceBear seed; falls back to the user's name
+  String get avatarSeed => _avatarSeed ?? _userName;
 
   // ── Getters — History ──────────────────
   List<WorkoutSession> get workoutHistory => _workoutHistory;
@@ -197,10 +200,14 @@ class AppState extends ChangeNotifier {
     final now = DateTime.now();
     return List.generate(7, (i) {
       final day = now.subtract(Duration(days: 6 - i));
-      return _workoutHistory.where((s) {
-        final d = DateTime.parse(s.date);
-        return d.year == day.year && d.month == day.month && d.day == day.day;
-      }).fold(0.0, (total, s) => total + s.caloriesBurned);
+      return _workoutHistory
+          .where((s) {
+            final d = DateTime.parse(s.date);
+            return d.year == day.year &&
+                d.month == day.month &&
+                d.day == day.day;
+          })
+          .fold(0.0, (total, s) => total + s.caloriesBurned);
     });
   }
 
@@ -209,10 +216,14 @@ class AppState extends ChangeNotifier {
     final now = DateTime.now();
     return List.generate(7, (i) {
       final day = now.subtract(Duration(days: 6 - i));
-      return _workoutHistory.where((s) {
-        final d = DateTime.parse(s.date);
-        return d.year == day.year && d.month == day.month && d.day == day.day;
-      }).fold(0.0, (total, s) => total + s.durationMinutes);
+      return _workoutHistory
+          .where((s) {
+            final d = DateTime.parse(s.date);
+            return d.year == day.year &&
+                d.month == day.month &&
+                d.day == day.day;
+          })
+          .fold(0.0, (total, s) => total + s.durationMinutes);
     });
   }
 
@@ -319,6 +330,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setAvatarSeed(String seed) {
+    _avatarSeed = seed;
+    _save();
+    notifyListeners();
+  }
+
   // ── History ────────────────────────────
   void addWorkoutSession(WorkoutSession session) {
     _workoutHistory.insert(0, session);
@@ -403,6 +420,7 @@ class AppState extends ChangeNotifier {
           'height': _userHeight,
           'age': _userAge,
           'goal': _fitnessGoal,
+          if (_avatarSeed != null) 'avatarSeed': _avatarSeed,
         },
         'stepGoal': _stepGoal,
         'notificationsEnabled': _notificationsEnabled,
@@ -426,10 +444,14 @@ class AppState extends ChangeNotifier {
     _userHeight = (profile['height'] as num?)?.toDouble() ?? 170.0;
     _userAge = (profile['age'] as num?)?.toInt() ?? 25;
     _fitnessGoal = profile['goal'] as String? ?? 'Stay Fit';
+    _avatarSeed = profile['avatarSeed'] as String?;
     _stepGoal = (data['stepGoal'] as num?)?.toInt() ?? 10000;
     _notificationsEnabled = data['notificationsEnabled'] as bool? ?? true;
     _workoutHistory = _mapList(data['workoutHistory'], WorkoutSession.fromMap);
-    _plannedWorkouts = _mapList(data['plannedWorkouts'], PlannedWorkout.fromMap);
+    _plannedWorkouts = _mapList(
+      data['plannedWorkouts'],
+      PlannedWorkout.fromMap,
+    );
     _bmiHistory = _mapList(data['bmiHistory'], BmiRecord.fromMap);
   }
 
@@ -451,6 +473,7 @@ class AppState extends ChangeNotifier {
     _userHeight = 170.0;
     _userAge = 25;
     _fitnessGoal = 'Stay Fit';
+    _avatarSeed = null;
     _workoutHistory = [];
     _plannedWorkouts = [];
     _bmiHistory = [];

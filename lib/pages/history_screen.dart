@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../services/app_state.dart';
 import '../services/exercise_data.dart';
-import 'app_colors.dart';
+import '../theme/fp_theme.dart';
+import '../theme/fp_widgets.dart';
 
 class HistoryScreen extends StatelessWidget {
   const HistoryScreen({super.key});
@@ -11,36 +13,39 @@ class HistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final history = appState.workoutHistory;
+    // Opened via '/history' (See all) rather than as a Home tab
+    final standalone = ModalRoute.of(context)?.canPop ?? false;
 
-    return SafeArea(
+    final content = SafeArea(
+      bottom: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Header ──────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            padding: EdgeInsets.fromLTRB(standalone ? 8 : 20, 18, 12, 0),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Workout History',
-                  style: TextStyle(
-                    color: AppColors.textDark,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                if (standalone)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      size: 20,
+                    ),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                ),
+                Expanded(child: Text('Workout history', style: FpText.h1())),
                 if (history.isNotEmpty)
                   TextButton.icon(
                     onPressed: () => _confirmClear(context),
                     icon: const Icon(
-                      Icons.delete_outline,
-                      color: Colors.red,
+                      Icons.delete_outline_rounded,
+                      color: FpColors.coral,
                       size: 18,
                     ),
-                    label: const Text(
+                    label: Text(
                       'Clear',
-                      style: TextStyle(color: Colors.red),
+                      style: FpText.label(color: FpColors.coral, size: 13),
                     ),
                   ),
               ],
@@ -48,88 +53,75 @@ class HistoryScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // ── Summary Cards ────────────────────────
+          // ── Summary ─────────────────────────────
           if (history.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
                   _SummaryCard(
-                    icon: Icons.local_fire_department,
-                    value: '${appState.totalWorkoutsCompleted}',
-                    label: 'Total\nWorkouts',
-                    color: const Color(0xFFE8956D),
-                    softColor: AppColors.softOrange,
+                    value: appState.totalWorkoutsCompleted,
+                    label: 'Workouts',
+                    color: FpColors.tealLight,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   _SummaryCard(
-                    icon: Icons.timer_outlined,
-                    value: '${appState.totalMinutesWorkedOut}',
-                    label: 'Total\nMinutes',
-                    color: AppColors.lightPurple,
-                    softColor: AppColors.softPurple,
+                    value: appState.totalMinutesWorkedOut,
+                    label: 'Minutes',
+                    color: FpColors.sky,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   _SummaryCard(
-                    icon: Icons.bolt,
-                    value: appState.totalCaloriesBurned.toStringAsFixed(0),
-                    label: 'Total\nCalories',
-                    color: AppColors.sageGreen,
-                    softColor: AppColors.softGreen,
+                    value: appState.totalCaloriesBurned.round(),
+                    label: 'Calories',
+                    color: FpColors.coral,
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   _SummaryCard(
-                    icon: Icons.calendar_today,
-                    value: '${appState.weeklyWorkouts}',
-                    label: 'This\nWeek',
-                    color: AppColors.lightPurple,
-                    softColor: AppColors.softPurple,
+                    value: appState.weeklyWorkouts,
+                    label: 'This week',
+                    color: FpColors.lime,
                   ),
                 ],
-              ),
+              ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
           ],
 
           // ── History List ─────────────────────────
           Expanded(
             child: history.isEmpty
-                ? _EmptyState()
+                ? const _EmptyState()
                 : _HistoryList(history: history),
           ),
         ],
       ),
+    );
+
+    if (!standalone) return content;
+    return Scaffold(
+      backgroundColor: FpColors.bg,
+      body: GradientBackground(child: content),
     );
   }
 
   void _confirmClear(BuildContext context) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Clear History?',
-          style: TextStyle(color: AppColors.textDark),
-        ),
-        content: const Text(
-          'All workout history will be deleted permanently.',
-          style: TextStyle(color: AppColors.textGrey),
-        ),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Clear history?'),
+        content: const Text('All workout history will be deleted permanently.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textGrey),
-            ),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Cancel', style: FpText.body(color: FpColors.muted)),
           ),
           TextButton(
             onPressed: () {
               context.read<AppState>().clearHistory();
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
             },
-            child: const Text('Clear', style: TextStyle(color: Colors.red)),
+            child: Text('Clear', style: FpText.h3(color: FpColors.coral)),
           ),
         ],
       ),
@@ -137,43 +129,72 @@ class HistoryScreen extends StatelessWidget {
   }
 }
 
+// ── Summary card ─────────────────────────────────────
+class _SummaryCard extends StatelessWidget {
+  final num value;
+  final String label;
+  final Color color;
+
+  const _SummaryCard({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GlassCard(
+        radius: 18,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+        child: Column(
+          children: [
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: CountUp(
+                value: value,
+                style: FpText.number(size: 18, color: color),
+              ),
+            ),
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label, style: FpText.label(size: 10)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Empty State ──────────────────────────────────────
 class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.border),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 100),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const TintIcon(
+              Icons.fitness_center_rounded,
+              color: FpColors.tealLight,
+              size: 84,
+            ).animate().scale(curve: Curves.easeOutBack, duration: 600.ms),
+            const SizedBox(height: 20),
+            Text('No workouts yet!', style: FpText.h2()),
+            const SizedBox(height: 8),
+            Text(
+              'Complete your first workout\nto see your history here.',
+              textAlign: TextAlign.center,
+              style: FpText.muted(size: 14),
             ),
-            child: const Icon(
-              Icons.fitness_center,
-              color: AppColors.textGrey,
-              size: 44,
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'No Workouts Yet!',
-            style: TextStyle(
-              color: AppColors.textDark,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Complete your first workout\nto see your history here.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textGrey, fontSize: 14),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -194,7 +215,7 @@ class _HistoryList extends StatelessWidget {
     final dates = grouped.keys.toList();
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
       itemCount: dates.length,
       itemBuilder: (context, index) {
         final date = dates[index];
@@ -203,7 +224,6 @@ class _HistoryList extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date header
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Row(
@@ -214,31 +234,25 @@ class _HistoryList extends StatelessWidget {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.softGreen,
+                      color: FpColors.teal.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: AppColors.sageGreen.withValues(alpha: 0.4),
+                        color: FpColors.teal.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Text(
                       _formatDate(date),
-                      style: const TextStyle(
-                        color: AppColors.sageGreen,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: FpText.label(color: FpColors.tealLight, size: 12),
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
-                    child: Divider(color: AppColors.border, thickness: 1),
-                  ),
+                  Expanded(child: Container(height: 1, color: FpColors.border)),
                 ],
               ),
             ),
             ...sessions.map((s) => _SessionCard(session: s)),
           ],
-        );
+        ).animate().fadeIn(delay: (60 * index).ms).slideY(begin: 0.06);
       },
     );
   }
@@ -279,162 +293,106 @@ class _SessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = ExerciseDataService.getCategoryColor(session.category);
+    final color = FpColors.forCategory(session.category);
     final icon = ExerciseDataService.getCategoryIcon(session.category);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            TintIcon(icon, color: color, size: 48),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          '${session.category} Workout',
+                          style: FpText.h3(),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (session.partial) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: FpColors.amber.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'PARTIAL',
+                            style: FpText.label(color: FpColors.amber, size: 9),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      _Chip(
+                        icon: Icons.fitness_center,
+                        label: '${session.exercisesCompleted} exercises',
+                      ),
+                      _Chip(
+                        icon: Icons.timer_outlined,
+                        label: '${session.durationMinutes} min',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            child: Icon(icon, color: color, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${session.category} Workout',
-                  style: const TextStyle(
-                    color: AppColors.textDark,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+                  session.caloriesBurned.toStringAsFixed(0),
+                  style: FpText.number(size: 18, color: FpColors.coral),
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    _InfoChip(
-                      icon: Icons.fitness_center,
-                      label: '${session.exercisesCompleted} exercises',
-                      color: color,
-                    ),
-                    const SizedBox(width: 10),
-                    _InfoChip(
-                      icon: Icons.timer_outlined,
-                      label: '${session.durationMinutes} min',
-                      color: AppColors.lightPurple,
-                    ),
-                  ],
-                ),
+                Text('cal', style: FpText.label(size: 10)),
               ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                session.date,
-                style: const TextStyle(color: AppColors.textGrey, fontSize: 11),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${session.caloriesBurned.toStringAsFixed(0)} cal',
-                style: const TextStyle(
-                  color: AppColors.sageGreen,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Info Chip ────────────────────────────────────────
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 12),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(color: AppColors.textGrey, fontSize: 12),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Summary Card ─────────────────────────────────────
-class _SummaryCard extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-  final Color softColor;
-
-  const _SummaryCard({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-    required this.softColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: softColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: color, size: 16),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: TextStyle(
-                color: color,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textGrey, fontSize: 10),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _Chip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: FpColors.muted),
+          const SizedBox(width: 4),
+          Text(label, style: FpText.muted(size: 11)),
+        ],
       ),
     );
   }

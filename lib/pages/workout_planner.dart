@@ -77,8 +77,9 @@ class _WorkoutPlannerScreenState extends State<WorkoutPlannerScreen> {
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color:
-                            isSelected ? AppColors.sageGreen : AppColors.card,
+                        color: isSelected
+                            ? AppColors.sageGreen
+                            : AppColors.card,
                         borderRadius: BorderRadius.circular(22),
                         border: Border.all(
                           color: isSelected
@@ -230,7 +231,7 @@ class _WorkoutPlannerScreenState extends State<WorkoutPlannerScreen> {
             24 + MediaQuery.of(ctx).viewInsets.bottom,
           ),
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.card,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
@@ -296,8 +297,9 @@ class _WorkoutPlannerScreenState extends State<WorkoutPlannerScreen> {
                         cat,
                         style: TextStyle(
                           color: isSelected ? color : AppColors.textGrey,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                           fontSize: 13,
                         ),
                       ),
@@ -334,17 +336,18 @@ class _WorkoutPlannerScreenState extends State<WorkoutPlannerScreen> {
                     borderSide: const BorderSide(color: AppColors.border),
                   ),
                 ),
-                items: [
-                  'Monday',
-                  'Tuesday',
-                  'Wednesday',
-                  'Thursday',
-                  'Friday',
-                  'Saturday',
-                  'Sunday',
-                ]
-                    .map((d) => DropdownMenuItem(value: d, child: Text(d)))
-                    .toList(),
+                items:
+                    [
+                          'Monday',
+                          'Tuesday',
+                          'Wednesday',
+                          'Thursday',
+                          'Friday',
+                          'Saturday',
+                          'Sunday',
+                        ]
+                        .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                        .toList(),
                 onChanged: (v) => setModalState(() => selectedDay = v!),
               ),
 

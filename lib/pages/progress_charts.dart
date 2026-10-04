@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/app_state.dart';
-import 'app_colors.dart';
+import '../theme/fp_theme.dart';
+import '../theme/fp_widgets.dart';
 
 class ProgressChartsScreen extends StatefulWidget {
   const ProgressChartsScreen({super.key});
@@ -35,33 +37,66 @@ class _ProgressChartsScreenState extends State<ProgressChartsScreen>
     final calories = appState.last7DaysCalories;
     final minutes = appState.last7DaysMinutes;
 
-    // Day labels (Mon-Sun real dates)
     final now = DateTime.now();
     final days = List.generate(7, (i) => now.subtract(Duration(days: 6 - i)));
     final labels = days.map((d) => _dayLabels[d.weekday - 1]).toList();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Progress Charts'),
-        backgroundColor: AppColors.background,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.sageGreen,
-          unselectedLabelColor: AppColors.textGrey,
-          indicatorColor: AppColors.sageGreen,
-          tabs: const [
-            Tab(text: 'Minutes'),
-            Tab(text: 'Calories'),
-          ],
+      backgroundColor: FpColors.bg,
+      body: GradientBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 20, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 20,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    Text('Progress', style: FpText.h1()),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                child: GlassCard(
+                  padding: const EdgeInsets.all(4),
+                  radius: 18,
+                  child: TabBar(
+                    controller: _tabController,
+                    dividerColor: Colors.transparent,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicator: BoxDecoration(
+                      gradient: FpColors.accentGradient,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    labelColor: FpColors.bgDeep,
+                    unselectedLabelColor: FpColors.muted,
+                    labelStyle: FpText.label(size: 13),
+                    tabs: const [
+                      Tab(text: 'Minutes', height: 40),
+                      Tab(text: 'Calories', height: 40),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildMinutesTab(minutes, labels, appState),
+                    _buildCaloriesTab(calories, labels, appState),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildMinutesTab(minutes, labels, appState),
-          _buildCaloriesTab(calories, labels, appState),
-        ],
       ),
     );
   }
@@ -72,146 +107,38 @@ class _ProgressChartsScreenState extends State<ProgressChartsScreen>
     List<String> labels,
     AppState appState,
   ) {
-    final maxVal = minutes.isEmpty
-        ? 60.0
-        : (minutes.reduce((a, b) => a > b ? a : b) + 10).clamp(20.0, 999.0);
-
-    return SingleChildScrollView(
+    return ListView(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Summary row ───────────────────────────
-          Row(
-            children: [
-              _SummaryTile(
-                label: 'This Week',
-                value: '${appState.weeklyWorkouts}',
-                unit: 'workouts',
-                color: AppColors.sageGreen,
-              ),
-              const SizedBox(width: 12),
-              _SummaryTile(
-                label: 'Total Time',
-                value: '${appState.totalMinutesWorkedOut}',
-                unit: 'minutes',
-                color: const Color(0xFF8B7CF6),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 28),
-
-          // ── Bar Chart ─────────────────────────────
-          const Text(
-            'Daily Workout Minutes',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
+      children: [
+        Row(
+          children: [
+            _SummaryTile(
+              label: 'This week',
+              value: appState.weeklyWorkouts,
+              unit: 'workouts',
+              color: FpColors.tealLight,
             ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Last 7 days',
-            style: TextStyle(fontSize: 12, color: AppColors.textGrey),
-          ),
-          const SizedBox(height: 20),
-
-          Container(
-            height: 240,
-            padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.border),
+            const SizedBox(width: 12),
+            _SummaryTile(
+              label: 'Total time',
+              value: appState.totalMinutesWorkedOut,
+              unit: 'minutes',
+              color: FpColors.violet,
             ),
-            child: minutes.every((v) => v == 0)
-                ? _EmptyChart(
-                    message: 'Complete workouts to see your progress!',
-                  )
-                : BarChart(
-                    BarChartData(
-                      maxY: maxVal,
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        horizontalInterval: maxVal / 4,
-                        getDrawingHorizontalLine: (value) =>
-                            FlLine(color: AppColors.border, strokeWidth: 1),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      titlesData: FlTitlesData(
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 36,
-                            interval: maxVal / 4,
-                            getTitlesWidget: (value, _) => Text(
-                              '${value.toInt()}',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: AppColors.textGrey,
-                              ),
-                            ),
-                          ),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            getTitlesWidget: (value, _) {
-                              final i = value.toInt();
-                              if (i < 0 || i >= labels.length) {
-                                return const SizedBox();
-                              }
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  labels[i],
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textGrey,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                      ),
-                      barGroups: List.generate(
-                        7,
-                        (i) => BarChartGroupData(
-                          x: i,
-                          barRods: [
-                            BarChartRodData(
-                              toY: minutes[i],
-                              color: minutes[i] > 0
-                                  ? AppColors.sageGreen
-                                  : AppColors.border,
-                              width: 22,
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(6),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-          ),
-
-          const SizedBox(height: 28),
-
-          // ── Streak section ────────────────────────
-          _StreakCard(workoutHistory: appState.workoutHistory),
-        ],
-      ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        _ChartCard(
+          title: 'Daily workout minutes',
+          values: minutes,
+          labels: labels,
+          colors: const [FpColors.teal, FpColors.lime],
+          emptyMessage: 'Complete workouts to see your progress!',
+          minMax: 20,
+        ),
+        const SizedBox(height: 24),
+        _StreakCard(streak: appState.currentStreak),
+      ],
     );
   }
 
@@ -221,222 +148,246 @@ class _ProgressChartsScreenState extends State<ProgressChartsScreen>
     List<String> labels,
     AppState appState,
   ) {
-    final spots = List.generate(7, (i) => FlSpot(i.toDouble(), calories[i]));
-    final maxVal = calories.isEmpty
-        ? 500.0
-        : (calories.reduce((a, b) => a > b ? a : b) + 50).clamp(100.0, 9999.0);
-
-    return SingleChildScrollView(
+    return ListView(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Summary row ───────────────────────────
-          Row(
-            children: [
-              _SummaryTile(
-                label: 'Total Burned',
-                value: appState.totalCaloriesBurned.toStringAsFixed(0),
-                unit: 'calories',
-                color: const Color(0xFFE07B54),
-              ),
-              const SizedBox(width: 12),
-              _SummaryTile(
-                label: 'This Week',
-                value: _weekCalories(appState).toStringAsFixed(0),
-                unit: 'cal this week',
-                color: AppColors.sageGreen,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 28),
-
-          // ── Line Chart ────────────────────────────
-          const Text(
-            'Calories Burned',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
+      children: [
+        Row(
+          children: [
+            _SummaryTile(
+              label: 'Total burned',
+              value: appState.totalCaloriesBurned.round(),
+              unit: 'calories',
+              color: FpColors.coral,
             ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Last 7 days',
-            style: TextStyle(fontSize: 12, color: AppColors.textGrey),
-          ),
-          const SizedBox(height: 20),
-
-          Container(
-            height: 240,
-            padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.border),
+            const SizedBox(width: 12),
+            _SummaryTile(
+              label: 'This week',
+              value: _weekCalories(appState).round(),
+              unit: 'cal this week',
+              color: FpColors.amber,
             ),
-            child: calories.every((v) => v == 0)
-                ? _EmptyChart(message: 'Complete workouts to see calorie data!')
-                : LineChart(
-                    LineChartData(
-                      maxY: maxVal,
-                      minY: 0,
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        horizontalInterval: maxVal / 4,
-                        getDrawingHorizontalLine: (_) =>
-                            FlLine(color: AppColors.border, strokeWidth: 1),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      titlesData: FlTitlesData(
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 40,
-                            interval: maxVal / 4,
-                            getTitlesWidget: (value, _) => Text(
-                              '${value.toInt()}',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: AppColors.textGrey,
-                              ),
-                            ),
-                          ),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            getTitlesWidget: (value, _) {
-                              final i = value.toInt();
-                              if (i < 0 || i >= labels.length) {
-                                return const SizedBox();
-                              }
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  labels[i],
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textGrey,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                      ),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: spots,
-                          isCurved: true,
-                          color: const Color(0xFFE07B54),
-                          barWidth: 3,
-                          isStrokeCapRound: true,
-                          dotData: FlDotData(
-                            show: true,
-                            getDotPainter: (spot, _, __, ___) =>
-                                FlDotCirclePainter(
-                              radius: 4,
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                              strokeColor: const Color(0xFFE07B54),
-                            ),
-                          ),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: const Color(0xFFE07B54).withValues(alpha: 0.12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-          ),
-
-          const SizedBox(height: 28),
-
-          // ── Per-category breakdown ────────────────
-          _CategoryBreakdown(history: appState.workoutHistory),
-        ],
-      ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        _ChartCard(
+          title: 'Calories burned',
+          values: calories,
+          labels: labels,
+          colors: const [FpColors.coral, FpColors.amber],
+          emptyMessage: 'Complete workouts to see calorie data!',
+          minMax: 100,
+        ),
+        const SizedBox(height: 24),
+        _CategoryBreakdown(history: appState.workoutHistory),
+      ],
     );
   }
 
   double _weekCalories(AppState appState) {
     final now = DateTime.now();
     final weekStart = now.subtract(Duration(days: now.weekday - 1));
-    return appState.workoutHistory.where((s) {
-      final d = DateTime.parse(s.date);
-      return d.isAfter(weekStart.subtract(const Duration(days: 1)));
-    }).fold(0.0, (sum, s) => sum + s.caloriesBurned);
+    return appState.workoutHistory
+        .where((s) {
+          final d = DateTime.parse(s.date);
+          return d.isAfter(weekStart.subtract(const Duration(days: 1)));
+        })
+        .fold(0.0, (sum, s) => sum + s.caloriesBurned);
+  }
+}
+
+// ── Gradient line chart card ──────────────────────────────────────────────────
+class _ChartCard extends StatelessWidget {
+  final String title;
+  final List<double> values;
+  final List<String> labels;
+  final List<Color> colors;
+  final String emptyMessage;
+  final double minMax;
+
+  const _ChartCard({
+    required this.title,
+    required this.values,
+    required this.labels,
+    required this.colors,
+    required this.emptyMessage,
+    required this.minMax,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final peak = values.fold(0.0, (a, b) => a > b ? a : b);
+    final maxY = (peak * 1.25).clamp(minMax, double.infinity);
+    return GlassCard(
+      glow: colors.first,
+      padding: const EdgeInsets.fromLTRB(16, 18, 18, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: FpText.h3()),
+          Text('Last 7 days', style: FpText.muted(size: 12)),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 210,
+            child: values.every((v) => v == 0)
+                ? _EmptyChart(message: emptyMessage)
+                : TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 1200),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, t, _) =>
+                        LineChart(_data(maxY, t), duration: Duration.zero),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  LineChartData _data(double maxY, double t) {
+    final spots = List.generate(
+      values.length,
+      (i) => FlSpot(i.toDouble(), values[i] * t),
+    );
+    return LineChartData(
+      minY: 0,
+      maxY: maxY,
+      gridData: FlGridData(
+        drawVerticalLine: false,
+        horizontalInterval: maxY / 4,
+        getDrawingHorizontalLine: (_) => FlLine(
+          color: Colors.white.withValues(alpha: 0.06),
+          strokeWidth: 1,
+          dashArray: [4, 4],
+        ),
+      ),
+      borderData: FlBorderData(show: false),
+      lineTouchData: LineTouchData(
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipColor: (_) => FpColors.surfaceHigh,
+          getTooltipItems: (spots) => spots
+              .map(
+                (s) => LineTooltipItem(
+                  values[s.x.toInt()].toStringAsFixed(0),
+                  FpText.label(color: FpColors.text, size: 12),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+      titlesData: FlTitlesData(
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 34,
+            interval: maxY / 4,
+            getTitlesWidget: (value, _) =>
+                Text('${value.toInt()}', style: FpText.label(size: 10)),
+          ),
+        ),
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            interval: 1,
+            getTitlesWidget: (value, _) {
+              final i = value.toInt();
+              if (i < 0 || i >= labels.length) return const SizedBox();
+              return Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  labels[i],
+                  style: FpText.label(
+                    size: 11,
+                    color: i == labels.length - 1
+                        ? FpColors.text
+                        : FpColors.muted,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      ),
+      lineBarsData: [
+        LineChartBarData(
+          spots: spots,
+          isCurved: true,
+          curveSmoothness: 0.35,
+          preventCurveOverShooting: true,
+          gradient: LinearGradient(colors: colors),
+          barWidth: 4,
+          isStrokeCapRound: true,
+          shadow: Shadow(
+            color: colors.last.withValues(alpha: 0.5),
+            blurRadius: 12,
+          ),
+          dotData: FlDotData(
+            getDotPainter: (spot, _, _, _) => FlDotCirclePainter(
+              radius: 4,
+              color: FpColors.bg,
+              strokeWidth: 2.5,
+              strokeColor: colors.last,
+            ),
+          ),
+          belowBarData: BarAreaData(
+            show: true,
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                colors.first.withValues(alpha: 0.35),
+                colors.last.withValues(alpha: 0.0),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
 // ── Streak Card ───────────────────────────────────────────────────────────────
 class _StreakCard extends StatelessWidget {
-  final List<WorkoutSession> workoutHistory;
-  const _StreakCard({required this.workoutHistory});
-
-  int get _currentStreak {
-    if (workoutHistory.isEmpty) return 0;
-    int streak = 0;
-    final now = DateTime.now();
-    for (int i = 0; i < 30; i++) {
-      final day = now.subtract(Duration(days: i));
-      final worked = workoutHistory.any((s) {
-        final d = DateTime.parse(s.date);
-        return d.year == day.year && d.month == day.month && d.day == day.day;
-      });
-      if (worked) {
-        streak++;
-      } else if (i > 0) {
-        break;
-      }
-    }
-    return streak;
-  }
+  final int streak;
+  const _StreakCard({required this.streak});
 
   @override
   Widget build(BuildContext context) {
-    final streak = _currentStreak;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1E9FA3), Color(0xFF0D7A7E)],
-        ),
-        borderRadius: BorderRadius.circular(20),
+    return GlassCard(
+      glow: FpColors.amber,
+      gradient: LinearGradient(
+        colors: [
+          FpColors.amber.withValues(alpha: 0.18),
+          FpColors.coral.withValues(alpha: 0.06),
+        ],
       ),
+      padding: const EdgeInsets.all(20),
       child: Row(
         children: [
-          const Text('🔥', style: TextStyle(fontSize: 36)),
+          const Text('🔥', style: TextStyle(fontSize: 36))
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .scaleXY(end: 1.15, duration: 900.ms),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$streak Day${streak == 1 ? '' : 's'} Streak!',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$streak day${streak == 1 ? '' : 's'} streak!',
+                  style: FpText.h2(),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                streak == 0
-                    ? 'Start your streak today!'
-                    : 'Keep it up, you\'re doing great!',
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  streak == 0
+                      ? 'Start your streak today!'
+                      : 'Keep it up, you\'re doing great!',
+                  style: FpText.muted(),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -465,62 +416,44 @@ class _CategoryBreakdown extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'By Category',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textDark,
-          ),
-        ),
+        const SectionTitle('By category'),
         const SizedBox(height: 12),
         ...sorted.map((e) {
           final pct = total > 0 ? e.value / total : 0.0;
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      e.key,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textDark,
+          final color = FpColors.forCategory(e.key);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: GlassCard(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: Text(e.key, style: FpText.h3())),
+                      Text(
+                        '${e.value.toStringAsFixed(0)} cal',
+                        style: FpText.label(color: color, size: 13),
                       ),
-                    ),
-                    Text(
-                      '${e.value.toStringAsFixed(0)} cal',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.sageGreen,
-                        fontWeight: FontWeight.bold,
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: pct),
+                      duration: const Duration(milliseconds: 1000),
+                      curve: Curves.easeOutCubic,
+                      builder: (_, v, _) => LinearProgressIndicator(
+                        value: v,
+                        minHeight: 7,
+                        backgroundColor: Colors.white.withValues(alpha: 0.06),
+                        valueColor: AlwaysStoppedAnimation(color),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: pct,
-                    minHeight: 6,
-                    backgroundColor: AppColors.border,
-                    valueColor: const AlwaysStoppedAnimation(
-                      AppColors.sageGreen,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         }),
@@ -532,7 +465,7 @@ class _CategoryBreakdown extends StatelessWidget {
 // ── Summary Tile ──────────────────────────────────────────────────────────────
 class _SummaryTile extends StatelessWidget {
   final String label;
-  final String value;
+  final num value;
   final String unit;
   final Color color;
 
@@ -546,33 +479,22 @@ class _SummaryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Container(
+      child: GlassCard(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: AppColors.textGrey),
-            ),
+            Text(label.toUpperCase(), style: FpText.label()),
             const SizedBox(height: 6),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: color,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: CountUp(
+                value: value,
+                style: FpText.number(size: 28, color: color),
               ),
             ),
-            Text(
-              unit,
-              style: const TextStyle(fontSize: 11, color: AppColors.textGrey),
-            ),
+            Text(unit, style: FpText.muted(size: 11)),
           ],
         ),
       ),
@@ -591,17 +513,9 @@ class _EmptyChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.bar_chart_rounded,
-            size: 48,
-            color: AppColors.border,
-          ),
+          const Icon(Icons.show_chart_rounded, size: 48, color: FpColors.faint),
           const SizedBox(height: 12),
-          Text(
-            message,
-            style: const TextStyle(color: AppColors.textGrey, fontSize: 13),
-            textAlign: TextAlign.center,
-          ),
+          Text(message, style: FpText.muted(), textAlign: TextAlign.center),
         ],
       ),
     );

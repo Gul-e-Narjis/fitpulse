@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
-import 'app_colors.dart';
 import '../services/app_state.dart';
 import '../services/auth_service.dart';
+import '../theme/fp_theme.dart';
+import '../theme/fp_widgets.dart';
 import 'bmi_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -26,6 +28,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'Build Muscle',
     'Improve Endurance',
     'Increase Flexibility',
+  ];
+
+  // DiceBear seeds offered in the picker (first one is the user's own name)
+  static const _avatarSeeds = [
+    'Felix',
+    'Aneka',
+    'Zoe',
+    'Milo',
+    'Luna',
+    'Leo',
+    'Nova',
+    'Kai',
+    'Maya',
   ];
 
   @override
@@ -60,543 +75,370 @@ class _ProfileScreenState extends State<ProfileScreen> {
       goal: _selectedGoal,
     );
     setState(() => _isEditing = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Profile saved! ✓'),
-        backgroundColor: AppColors.sageGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Profile saved! ✓')));
+  }
+
+  Future<void> _signOut() async {
+    final appState = context.read<AppState>();
+    final nav = Navigator.of(context);
+    await AuthService.signOut();
+    appState.signOut();
+    nav.pushNamedAndRemoveUntil('/landing', (r) => false);
   }
 
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
+    final firstName = appState.userName.split(' ')[0];
+    final seeds = [appState.userName, ..._avatarSeeds];
 
-    return SafeArea(
-      child: SingleChildScrollView(
+    final sections = <Widget>[
+      // ── Top bar ─────────────────────────────────
+      Row(
+        children: [
+          Expanded(child: Text('My profile', style: FpText.h1())),
+          GlowButton(
+            label: _isEditing ? 'Save' : 'Edit',
+            icon: _isEditing ? Icons.check_rounded : Icons.edit_rounded,
+            expand: false,
+            height: 40,
+            gradient: _isEditing
+                ? FpColors.accentGradient
+                : LinearGradient(
+                    colors: [
+                      Colors.white.withValues(alpha: 0.12),
+                      Colors.white.withValues(alpha: 0.06),
+                    ],
+                  ),
+            textColor: _isEditing ? FpColors.bgDeep : FpColors.text,
+            onTap: () {
+              if (_isEditing) {
+                _save();
+              } else {
+                setState(() => _isEditing = true);
+              }
+            },
+          ),
+        ],
+      ),
+      const SizedBox(height: 18),
+
+      // ── Identity card ───────────────────────────
+      GlassCard(
+        glow: FpColors.teal,
+        padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
         child: Column(
           children: [
-            // ── TEAL HEADER ───────────────────────────
+            FpAvatar(
+              seed: appState.avatarSeed,
+              size: 96,
+              fallbackInitial: firstName.isEmpty ? '' : firstName[0],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              appState.userName,
+              style: FpText.h2(),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 2),
+            Text(appState.userEmail, style: FpText.muted()),
+            const SizedBox(height: 8),
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF1E9FA3), Color(0xFF0A6B6F)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: FpColors.lime.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: Column(
-                children: [
-                  // Top bar
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'My Profile',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          if (_isEditing) {
-                            _save();
-                          } else {
-                            setState(() => _isEditing = true);
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.4),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                _isEditing
-                                    ? Icons.check_rounded
-                                    : Icons.edit_rounded,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                _isEditing ? 'Save' : 'Edit',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Avatar
-                  Stack(
-                    children: [
-                      Container(
-                        width: 92,
-                        height: 92,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.2),
-                          border: Border.all(color: Colors.white, width: 3),
-                        ),
-                        child: Center(
-                          child: appState.userName == 'Fitness User' ||
-                                  appState.userName.isEmpty
-                              ? const Icon(
-                                  Icons.person_rounded,
-                                  color: Colors.white,
-                                  size: 46,
-                                )
-                              : Text(
-                                  appState.userName[0].toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 40,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                        ),
-                      ),
-                      // Fitness badge overlay
-                      Positioned(
-                        bottom: 2,
-                        right: 2,
-                        child: Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0A5F62),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: const Icon(
-                            Icons.fitness_center_rounded,
-                            color: Colors.white,
-                            size: 14,
-                          ),
-                        ),
-                      ),
-                      if (_isEditing)
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(5),
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt_rounded,
-                              color: AppColors.sageGreen,
-                              size: 13,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Text(
-                    appState.userName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      appState.fitnessGoal,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ── 3 stats in header ─────────────────
-                  Row(
-                    children: [
-                      _HeaderStat(
-                        value: '${appState.totalWorkoutsCompleted}',
-                        label: 'Workouts',
-                        icon: Icons.fitness_center_rounded,
-                        iconColor: const Color(0xFFFFE082),
-                      ),
-                      _vDivider(),
-                      _HeaderStat(
-                        value: '${appState.totalMinutesWorkedOut}',
-                        label: 'Minutes',
-                        icon: Icons.timer_rounded,
-                        iconColor: const Color(0xFFB2EBF2),
-                      ),
-                      _vDivider(),
-                      _HeaderStat(
-                        value: appState.totalCaloriesBurned.toStringAsFixed(0),
-                        label: 'Calories',
-                        icon: Icons.local_fire_department_rounded,
-                        iconColor: const Color(0xFFFFCCBC),
-                      ),
-                    ],
-                  ),
-                ],
+              child: Text(
+                appState.fitnessGoal,
+                style: FpText.label(color: FpColors.lime, size: 12),
               ),
             ),
-
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── BMI CARD ──────────────────────────
-                  GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const BMIScreen()),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF1E9FA3), Color(0xFF0A5F62)],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.sageGreen.withValues(alpha: 0.25),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Your BMI',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                appState.bmi.toStringAsFixed(1),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.25),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  appState.bmiCategory,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Spacer(),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Icon(
-                                Icons.monitor_weight_outlined,
-                                color: Colors.white,
-                                size: 32,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${appState.userWeight.toStringAsFixed(0)} kg',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              Text(
-                                '${appState.userHeight.toStringAsFixed(0)} cm',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Tap to calculate →',
-                                style: TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // ── PERSONAL INFO ─────────────────────
-                  const Text(
-                    'Personal Info',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  _ProfileField(
-                    label: 'Full Name',
-                    icon: Icons.person_outline_rounded,
-                    controller: _nameCtrl,
-                    editing: _isEditing,
-                  ),
-                  _ProfileField(
-                    label: 'Email',
-                    icon: Icons.email_outlined,
-                    controller: _emailCtrl,
-                    editing: false, // login email is owned by Firebase Auth
-                    keyboard: TextInputType.emailAddress,
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ProfileField(
-                          label: 'Weight (kg)',
-                          icon: Icons.monitor_weight_outlined,
-                          controller: _weightCtrl,
-                          editing: _isEditing,
-                          keyboard: TextInputType.number,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ProfileField(
-                          label: 'Height (cm)',
-                          icon: Icons.height_rounded,
-                          controller: _heightCtrl,
-                          editing: _isEditing,
-                          keyboard: TextInputType.number,
-                        ),
-                      ),
-                    ],
-                  ),
-                  _ProfileField(
-                    label: 'Age',
-                    icon: Icons.cake_outlined,
-                    controller: _ageCtrl,
-                    editing: _isEditing,
-                    keyboard: TextInputType.number,
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ── FITNESS GOAL ──────────────────────
-                  const Text(
-                    'Fitness Goal',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _goals.map((g) {
-                      final selected = g == _selectedGoal;
-                      return GestureDetector(
-                        onTap: _isEditing
-                            ? () => setState(() => _selectedGoal = g)
-                            : null,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                selected ? AppColors.sageGreen : AppColors.card,
-                            borderRadius: BorderRadius.circular(22),
-                            border: Border.all(
-                              color: selected
-                                  ? AppColors.sageGreen
-                                  : AppColors.border,
-                              width: selected ? 2 : 1,
-                            ),
-                          ),
-                          child: Text(
-                            g,
-                            style: TextStyle(
-                              color:
-                                  selected ? Colors.white : AppColors.textGrey,
-                              fontSize: 13,
-                              fontWeight: selected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  // ── LOGOUT ────────────────────────────
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final appState = context.read<AppState>();
-                        final nav = Navigator.of(context);
-                        await AuthService.signOut();
-                        appState.signOut();
-                        nav.pushNamedAndRemoveUntil('/landing', (r) => false);
-                      },
-                      icon: const Icon(
-                        Icons.logout_rounded,
-                        color: Colors.redAccent,
-                      ),
-                      label: const Text(
-                        'Sign Out',
-                        style: TextStyle(
-                          color: Colors.redAccent,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: Colors.redAccent),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                _HeaderStat(
+                  value: appState.totalWorkoutsCompleted,
+                  label: 'Workouts',
+                  color: FpColors.tealLight,
+                ),
+                _vDivider(),
+                _HeaderStat(
+                  value: appState.totalMinutesWorkedOut,
+                  label: 'Minutes',
+                  color: FpColors.sky,
+                ),
+                _vDivider(),
+                _HeaderStat(
+                  value: appState.totalCaloriesBurned.round(),
+                  label: 'Calories',
+                  color: FpColors.coral,
+                ),
+              ],
             ),
           ],
         ),
+      ),
+      const SizedBox(height: 24),
+
+      // ── Avatar picker ───────────────────────────
+      const SectionTitle('Choose your avatar'),
+      const SizedBox(height: 12),
+      GlassCard(
+        padding: const EdgeInsets.all(12),
+        child: GridView.count(
+          crossAxisCount: 5,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          children: [
+            for (var i = 0; i < seeds.length; i++)
+              _AvatarOption(
+                    seed: seeds[i],
+                    selected: seeds[i] == appState.avatarSeed,
+                    onTap: () => appState.setAvatarSeed(seeds[i]),
+                  )
+                  .animate()
+                  .fadeIn(delay: (40 * i).ms)
+                  .scaleXY(begin: 0.7, curve: Curves.easeOutBack),
+          ],
+        ),
+      ),
+      const SizedBox(height: 24),
+
+      // ── BMI card ────────────────────────────────
+      GlassCard(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const BMIScreen()),
+        ),
+        child: Row(
+          children: [
+            AnimatedRing(
+              progress: ((appState.bmi - 15) / 25).clamp(0, 1),
+              size: 72,
+              stroke: 7,
+              colors: [appState.bmiColor, FpColors.tealLight],
+              child: Text(
+                appState.bmi.toStringAsFixed(1),
+                style: FpText.number(size: 16),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('YOUR BMI', style: FpText.label()),
+                  const SizedBox(height: 2),
+                  Text(appState.bmiCategory, style: FpText.h2()),
+                  Text(
+                    '${appState.userWeight.toStringAsFixed(0)} kg • ${appState.userHeight.toStringAsFixed(0)} cm',
+                    style: FpText.muted(size: 12),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: FpColors.faint),
+          ],
+        ),
+      ),
+      const SizedBox(height: 24),
+
+      // ── Personal info ───────────────────────────
+      const SectionTitle('Personal info'),
+      const SizedBox(height: 12),
+      _ProfileField(
+        label: 'Full name',
+        icon: Icons.person_outline_rounded,
+        controller: _nameCtrl,
+        editing: _isEditing,
+      ),
+      _ProfileField(
+        label: 'Email',
+        icon: Icons.email_outlined,
+        controller: _emailCtrl,
+        editing: false, // login email is owned by Firebase Auth
+        keyboard: TextInputType.emailAddress,
+      ),
+      Row(
+        children: [
+          Expanded(
+            child: _ProfileField(
+              label: 'Weight (kg)',
+              icon: Icons.monitor_weight_outlined,
+              controller: _weightCtrl,
+              editing: _isEditing,
+              keyboard: TextInputType.number,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _ProfileField(
+              label: 'Height (cm)',
+              icon: Icons.height_rounded,
+              controller: _heightCtrl,
+              editing: _isEditing,
+              keyboard: TextInputType.number,
+            ),
+          ),
+        ],
+      ),
+      _ProfileField(
+        label: 'Age',
+        icon: Icons.cake_outlined,
+        controller: _ageCtrl,
+        editing: _isEditing,
+        keyboard: TextInputType.number,
+      ),
+      const SizedBox(height: 12),
+
+      // ── Fitness goal ────────────────────────────
+      const SectionTitle('Fitness goal'),
+      const SizedBox(height: 12),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: _goals.map((g) {
+          final selected = g == _selectedGoal;
+          return Bounce(
+            onTap: _isEditing ? () => setState(() => _selectedGoal = g) : null,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: selected ? FpColors.accentGradient : null,
+                color: selected ? null : Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: selected ? Colors.transparent : FpColors.border,
+                ),
+              ),
+              child: Text(
+                g,
+                style: FpText.label(
+                  color: selected ? FpColors.bgDeep : FpColors.muted,
+                  size: 13,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+      const SizedBox(height: 28),
+
+      // ── Sign out ────────────────────────────────
+      GlowButton(
+        label: 'Sign out',
+        icon: Icons.logout_rounded,
+        gradient: LinearGradient(
+          colors: [
+            FpColors.coral.withValues(alpha: 0.22),
+            FpColors.coral.withValues(alpha: 0.12),
+          ],
+        ),
+        textColor: FpColors.coral,
+        onTap: _signOut,
+      ),
+    ];
+
+    return SafeArea(
+      bottom: false,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 110),
+        children: [
+          for (var i = 0; i < sections.length; i++)
+            sections[i]
+                .animate()
+                .fadeIn(delay: (30 * (i ~/ 2)).ms, duration: 400.ms)
+                .slideY(begin: 0.06),
+        ],
       ),
     );
   }
 
   Widget _vDivider() => Container(
-        width: 1,
-        height: 40,
-        color: Colors.white.withValues(alpha: 0.25),
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-      );
+    width: 1,
+    height: 36,
+    color: FpColors.border,
+    margin: const EdgeInsets.symmetric(horizontal: 8),
+  );
+}
+
+// ── Avatar option ─────────────────────────────────────────────────────────────
+class _AvatarOption extends StatelessWidget {
+  final String seed;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _AvatarOption({
+    required this.seed,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Bounce(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.all(2.5),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: selected
+              ? const SweepGradient(
+                  colors: [FpColors.teal, FpColors.lime, FpColors.teal],
+                )
+              : null,
+          color: selected ? null : Colors.white.withValues(alpha: 0.06),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: FpColors.lime.withValues(alpha: 0.4),
+                    blurRadius: 12,
+                  ),
+                ]
+              : null,
+        ),
+        child: LayoutBuilder(
+          builder: (context, c) =>
+              FpAvatar(seed: seed, size: c.maxWidth, ring: false),
+        ),
+      ),
+    );
+  }
 }
 
 // ── Header Stat ───────────────────────────────────────────────────────────────
 class _HeaderStat extends StatelessWidget {
-  final String value, label;
-  final IconData icon;
-  final Color iconColor;
+  final num value;
+  final String label;
+  final Color color;
   const _HeaderStat({
     required this.value,
     required this.label,
-    required this.icon,
-    required this.iconColor,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) => Expanded(
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.5),
-                  width: 1.5,
-                ),
-              ),
-              child: Icon(icon, color: iconColor, size: 24),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              label,
-              style:
-                  TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11),
-            ),
-          ],
+    child: Column(
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: CountUp(
+            value: value,
+            style: FpText.number(size: 20, color: color),
+          ),
         ),
-      );
+        Text(label, style: FpText.label(size: 10)),
+      ],
+    ),
+  );
 }
 
 // ── Profile Field ─────────────────────────────────────────────────────────────
@@ -617,29 +459,22 @@ class _ProfileField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color:
-              editing ? AppColors.sageGreen.withValues(alpha: 0.5) : AppColors.border,
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
         controller: controller,
         enabled: editing,
         keyboardType: keyboard,
-        style: const TextStyle(color: AppColors.textDark, fontSize: 15),
+        style: FpText.body(size: 15),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: AppColors.textGrey, fontSize: 13),
-          prefixIcon: Icon(icon, color: AppColors.sageGreen, size: 20),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
+          prefixIcon: Icon(icon, color: FpColors.tealLight, size: 20),
+          fillColor: editing
+              ? FpColors.surfaceHigh
+              : Colors.white.withValues(alpha: 0.04),
+          disabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: FpColors.border),
           ),
         ),
       ),

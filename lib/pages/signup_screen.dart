@@ -76,7 +76,9 @@ class _SignUpScreenState extends State<SignUpScreen>
     } on AuthFailure catch (e) {
       _showError(e.message);
     } catch (e) {
-      _showError('Account created, but saving your profile failed. Try signing in.');
+      _showError(
+        'Account created, but saving your profile failed. Try signing in.',
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -96,7 +98,7 @@ class _SignUpScreenState extends State<SignUpScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D7A7E),
+      backgroundColor: AppColors.darkTeal,
       body: Stack(
         children: [
           // Decorative circles
@@ -148,7 +150,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                             child: const Icon(
                               Icons.person_add_alt_1_rounded,
                               size: 36,
-                              color: Color(0xFF1E9FA3),
+                              color: AppColors.sageGreen,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -179,7 +181,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                   flex: 8,
                   child: Container(
                     decoration: const BoxDecoration(
-                      color: Color(0xFFF4F8F7),
+                      color: AppColors.background,
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(36),
                         topRight: Radius.circular(36),
@@ -197,7 +199,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1A2E2E),
+                                color: AppColors.textDark,
                               ),
                             ),
                             const SizedBox(height: 24),

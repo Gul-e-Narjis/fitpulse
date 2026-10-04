@@ -450,12 +450,12 @@ class ExerciseDataService {
   }
 
   static List<String> get categories => [
-        'Cardio',
-        'Arm',
-        'Leg',
-        'Core',
-        'Full Body',
-      ];
+    'Cardio',
+    'Arm',
+    'Leg',
+    'Core',
+    'Full Body',
+  ];
 
   static Color getCategoryColor(String category) {
     switch (category) {
@@ -535,4 +535,51 @@ class ExerciseDataService {
         return '30 Minutes';
     }
   }
+}
+
+// ── free-exercise-db visuals ──────────────────────────────────────────────────
+// Closest matching entry in github.com/yuhonas/free-exercise-db for each
+// exercise (Burpees, Planche Push-Up and Dragon Flag have no exact match).
+const _exerciseDbIds = {
+  'Jumping Jacks': 'Star_Jump',
+  'High Knees': 'Knee_Tuck_Jump',
+  'Burpees': 'Frog_Hops',
+  'Mountain Climbers': 'Mountain_Climbers',
+  'Push Ups': 'Pushups',
+  'Tricep Dips': 'Bench_Dips',
+  'Bicep Curls': 'Dumbbell_Bicep_Curl',
+  'Shoulder Press': 'Dumbbell_Shoulder_Press',
+  'Squats': 'Bodyweight_Squat',
+  'Lunges': 'Bodyweight_Walking_Lunge',
+  'Calf Raises': 'Standing_Calf_Raises',
+  'Glute Bridges': 'Butt_Lift_Bridge',
+  'Plank': 'Plank',
+  'Russian Twists': 'Russian_Twist',
+  'Leg Raises': 'Flat_Bench_Lying_Leg_Raise',
+  'Bicycle Crunches': 'Air_Bike',
+  'Kettlebell Swings': 'One-Arm_Kettlebell_Swings',
+  'Renegade Rows': 'Alternating_Renegade_Row',
+  'Thrusters': 'Kettlebell_Thruster',
+  'Muscle Ups': 'Muscle_Up',
+  'Pistol Squat': 'Kettlebell_Pistol_Squat',
+  'Planche Push-Up': 'Decline_Push-Up',
+  'Dragon Flag': 'Hanging_Leg_Raise',
+  'Sprint Intervals': 'Wind_Sprints',
+};
+
+extension ExerciseVisuals on Exercise {
+  String? get dbId => _exerciseDbIds[name];
+
+  // frame 0 = start position, 1 = end position
+  String? imageUrl(int frame) => dbId == null
+      ? null
+      : 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/$dbId/$frame.jpg';
+
+  // Up to 4 short "How to do it" steps from the numbered instructions
+  List<String> get steps => instructions
+      .split('\n')
+      .map((l) => l.replaceFirst(RegExp(r'^\s*\d+[.)]\s*'), '').trim())
+      .where((l) => l.isNotEmpty)
+      .take(4)
+      .toList();
 }

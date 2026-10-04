@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../services/exercise_data.dart';
 import '../services/app_state.dart';
-import 'exercise_detail.dart';
-import 'app_colors.dart';
 import '../services/workout_tracker.dart';
+import '../theme/fp_theme.dart';
+import '../theme/fp_widgets.dart';
+import 'exercise_detail.dart';
 
 class WorkoutDetailPage extends StatelessWidget {
   final String category;
@@ -14,264 +16,231 @@ class WorkoutDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final exercises = ExerciseDataService.getByCategory(category);
-    final color = ExerciseDataService.getCategoryColor(category);
-    final icon = ExerciseDataService.getCategoryIcon(category);
+    final color = FpColors.forCategory(category);
     final duration = ExerciseDataService.getCategoryDuration(category);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          // ── Header ──────────────────────────────
-          SliverAppBar(
-            expandedHeight: 220,
-            pinned: true,
-            backgroundColor: AppColors.background,
-            leading: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.arrow_back_ios_new,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [color, color.withValues(alpha: 0.7)],
+      backgroundColor: FpColors.bg,
+      body: GradientBackground(
+        child: CustomScrollView(
+          slivers: [
+            // ── Header ──────────────────────────────
+            SliverAppBar(
+              expandedHeight: 260,
+              pinned: true,
+              backgroundColor: FpColors.bg,
+              surfaceTintColor: Colors.transparent,
+              leading: Padding(
+                padding: const EdgeInsets.all(8),
+                child: GlassCard(
+                  padding: EdgeInsets.zero,
+                  radius: 14,
+                  onTap: () => Navigator.pop(context),
+                  child: const Center(
+                    child: Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: FpColors.text,
+                      size: 18,
+                    ),
                   ),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    const SizedBox(height: 40),
-                    Container(
-                      padding: const EdgeInsets.all(16),
+                    if (exercises.isNotEmpty)
+                      ExerciseImage(
+                        exercise: exercises.first,
+                        animate: true,
+                        radius: 0,
+                      ),
+                    DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(icon, size: 48, color: Colors.white),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      category,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '${exercises.length} Exercises  •  $duration',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            color.withValues(alpha: 0.25),
+                            FpColors.bg.withValues(alpha: 0.55),
+                            FpColors.bg,
+                          ],
+                          stops: const [0, 0.6, 1],
                         ),
                       ),
+                    ),
+                    Positioned(
+                      left: 20,
+                      right: 20,
+                      bottom: 18,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TintIcon(
+                            ExerciseDataService.getCategoryIcon(category),
+                            color: color,
+                            size: 44,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(category, style: FpText.display(size: 30)),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${exercises.length} exercises  •  $duration',
+                            style: FpText.muted(),
+                          ),
+                        ],
+                      ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
 
-          // ── Start Button ─────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-              child: ElevatedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => WorkoutSessionPage(
-                      category: category,
-                      exercises: exercises,
-                      color: color,
+            // ── Start Button ─────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: GlowButton(
+                  label: 'Start Workout',
+                  icon: Icons.play_arrow_rounded,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => WorkoutSessionPage(
+                        category: category,
+                        exercises: exercises,
+                        color: color,
+                      ),
                     ),
-                  ),
-                ),
-                icon: const Icon(Icons.play_arrow_rounded, size: 24),
-                label: const Text(
-                  'Start Workout',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: color,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 54),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
               ),
             ),
-          ),
 
-          // ── Exercise List ────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final exercise = exercises[index];
-                return GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ExerciseDetailPage(exercise: exercise),
-                    ),
-                  ),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        // Number
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${index + 1}',
-                              style: TextStyle(
-                                color: color,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
+            // ── Exercise List ────────────────────────
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 30),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final exercise = exercises[index];
+                  return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: GlassCard(
+                          padding: const EdgeInsets.all(10),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ExerciseDetailPage(exercise: exercise),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 14),
-
-                        // Info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Text(
-                                exercise.name,
-                                style: const TextStyle(
-                                  color: AppColors.textDark,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
+                              SizedBox(
+                                width: 72,
+                                height: 72,
+                                child: Hero(
+                                  tag: 'ex-${exercise.name}',
+                                  child: ExerciseImage(
+                                    exercise: exercise,
+                                    radius: 14,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.timer_outlined,
-                                    size: 12,
-                                    color: AppColors.textGrey,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    exercise.duration,
-                                    style: const TextStyle(
-                                      color: AppColors.textGrey,
-                                      fontSize: 12,
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${index + 1}. ${exercise.name}',
+                                      style: FpText.h3(),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Icon(
-                                    Icons.repeat,
-                                    size: 12,
-                                    color: AppColors.textGrey,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    exercise.reps,
-                                    style: const TextStyle(
-                                      color: AppColors.textGrey,
-                                      fontSize: 12,
+                                    const SizedBox(height: 6),
+                                    Wrap(
+                                      spacing: 10,
+                                      runSpacing: 4,
+                                      children: [
+                                        _Meta(
+                                          Icons.timer_outlined,
+                                          exercise.duration,
+                                        ),
+                                        _Meta(Icons.repeat, exercise.reps),
+                                      ],
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 6),
+                                    DifficultyChip(exercise.difficulty),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.chevron_right_rounded,
+                                color: FpColors.faint,
                               ),
                             ],
                           ),
                         ),
-
-                        // Difficulty
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _diffColor(
-                              exercise.difficulty,
-                            ).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            exercise.difficulty,
-                            style: TextStyle(
-                              color: _diffColor(exercise.difficulty),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.chevron_right,
-                          color: AppColors.textGrey,
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }, childCount: exercises.length),
+                      )
+                      .animate()
+                      .fadeIn(delay: (50 * index).ms)
+                      .slideX(begin: 0.06);
+                }, childCount: exercises.length),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+}
 
-  Color _diffColor(String difficulty) {
-    switch (difficulty) {
+class _Meta extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _Meta(this.icon, this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: FpColors.muted),
+        const SizedBox(width: 4),
+        Text(text, style: FpText.muted(size: 12)),
+      ],
+    );
+  }
+}
+
+class DifficultyChip extends StatelessWidget {
+  final String difficulty;
+  const DifficultyChip(this.difficulty, {super.key});
+
+  static Color colorFor(String d) {
+    switch (d) {
       case 'Beginner':
-        return AppColors.sageGreen;
+        return FpColors.lime;
       case 'Intermediate':
-        return const Color(0xFFE8956D);
+        return FpColors.amber;
       case 'Advanced':
-        return Colors.red;
+        return FpColors.coral;
       default:
-        return AppColors.lightPurple;
+        return FpColors.violet;
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = colorFor(difficulty);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(difficulty, style: FpText.label(color: c, size: 10)),
+    );
   }
 }
 
@@ -370,40 +339,25 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
     final end = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'End workout?',
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: const Text('End workout?'),
         content: Text(
           'You\'ve done ${session.exercisesCompleted} exercise'
           '${session.exercisesCompleted == 1 ? '' : 's'} • '
           '${_formatDuration(session.durationSeconds)} • '
           '${session.caloriesBurned.toStringAsFixed(0)} cal.\n'
           'This will be saved as a partial workout.',
-          style: const TextStyle(color: AppColors.textGrey, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
+            child: Text(
               'Keep going',
-              style: TextStyle(color: AppColors.textGrey),
+              style: FpText.body(color: FpColors.muted),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'End & save',
-              style: TextStyle(
-                color: AppColors.sageGreen,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: Text('End & save', style: FpText.h3(color: FpColors.lime)),
           ),
         ],
       ),
@@ -437,30 +391,23 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          saved ? '🎉 Workout Complete!' : 'Workout not recorded',
-          style: const TextStyle(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: Text(saved ? '🎉 Workout Complete!' : 'Workout not recorded'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: AppColors.softGreen,
                 shape: BoxShape.circle,
+                gradient: saved ? FpColors.accentGradient : null,
+                color: saved ? null : FpColors.surface,
               ),
               child: Icon(
                 saved ? Icons.emoji_events : Icons.timer_off_outlined,
-                color: AppColors.sageGreen,
-                size: 48,
+                color: saved ? FpColors.bgDeep : FpColors.muted,
+                size: 44,
               ),
-            ),
+            ).animate().scale(curve: Curves.elasticOut, duration: 900.ms),
             const SizedBox(height: 16),
             Text(
               saved
@@ -470,7 +417,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
                   : 'Less than a minute of exercise was done, '
                         'so nothing was saved.',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textGrey, fontSize: 14),
+              style: FpText.body(color: FpColors.muted),
             ),
           ],
         ),
@@ -478,13 +425,7 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
           TextButton(
             onPressed: () =>
                 Navigator.popUntil(context, (route) => route.isFirst),
-            child: const Text(
-              'Back to Home',
-              style: TextStyle(
-                color: AppColors.sageGreen,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: Text('Back to Home', style: FpText.h3(color: FpColors.lime)),
           ),
         ],
       ),
@@ -496,6 +437,8 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
     final exercise = widget.exercises[_currentIndex];
     final totalSeconds = _tracker.currentTotalSeconds;
     final progress = _secondsLeft / totalSeconds;
+    final next = _tracker.next;
+    final running = _isRunning && !_isPaused;
 
     return PopScope(
       canPop: false,
@@ -503,171 +446,322 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
         if (!didPop) _requestExit();
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          elevation: 0,
-          title: Text(
-            '${_currentIndex + 1} / ${widget.exercises.length}',
-            style: const TextStyle(color: AppColors.textGrey, fontSize: 16),
-          ),
-          centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.close, color: AppColors.textDark),
-            onPressed: _requestExit,
-          ),
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              // Progress bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: (_currentIndex + 1) / widget.exercises.length,
-                  backgroundColor: AppColors.border,
-                  valueColor: AlwaysStoppedAnimation(widget.color),
-                  minHeight: 6,
-                ),
-              ),
-              const SizedBox(height: 40),
-
-              // Exercise name
-              Text(
-                exercise.name,
-                style: const TextStyle(
-                  color: AppColors.textDark,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                exercise.reps,
-                style: TextStyle(
-                  color: widget.color,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 40),
-
-              // Timer circle
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: 200,
-                    height: 200,
-                    child: CircularProgressIndicator(
-                      value: progress,
-                      strokeWidth: 10,
-                      backgroundColor: AppColors.border,
-                      valueColor: AlwaysStoppedAnimation(widget.color),
-                    ),
-                  ),
-                  Column(
-                    children: [
-                      Text(
-                        '$_secondsLeft',
-                        style: const TextStyle(
-                          color: AppColors.textDark,
-                          fontSize: 56,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Text(
-                        'seconds',
-                        style: TextStyle(color: AppColors.textGrey),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              // Muscles
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
+        backgroundColor: FpColors.bg,
+        body: GradientBackground(
+          child: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxHeight < 720;
+                final timerSize = compact ? 150.0 : 190.0;
+                return Column(
                   children: [
-                    Icon(
-                      Icons.accessibility_new,
-                      color: widget.color,
-                      size: 20,
+                    // ── Top bar ─────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            color: FpColors.text,
+                            onPressed: _requestExit,
+                          ),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                Text(
+                                  '${_currentIndex + 1} / ${widget.exercises.length}',
+                                  style: FpText.label(),
+                                ),
+                                const SizedBox(height: 6),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: TweenAnimationBuilder<double>(
+                                    tween: Tween(
+                                      end:
+                                          (_currentIndex + 1) /
+                                          widget.exercises.length,
+                                    ),
+                                    duration: 500.ms,
+                                    builder: (_, v, _) =>
+                                        LinearProgressIndicator(
+                                          value: v,
+                                          minHeight: 5,
+                                          backgroundColor: Colors.white
+                                              .withValues(alpha: 0.08),
+                                          valueColor:
+                                              const AlwaysStoppedAnimation(
+                                                FpColors.lime,
+                                              ),
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 48),
+                        ],
+                      ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(height: 12),
+
+                    // ── Exercise visual + glass overlay ─
                     Expanded(
-                      child: Text(
-                        exercise.musclesTargeted,
-                        style: const TextStyle(
-                          color: AppColors.textGrey,
-                          fontSize: 13,
-                        ),
+                      child:
+                          Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(28),
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      ExerciseImage(
+                                        key: ValueKey(exercise.name),
+                                        exercise: exercise,
+                                        animate: true,
+                                        radius: 0,
+                                      ),
+                                      const DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              Colors.transparent,
+                                              Color(0xCC070C17),
+                                            ],
+                                            stops: [0.45, 1],
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        left: 12,
+                                        right: 12,
+                                        bottom: 12,
+                                        child: _ExerciseOverlay(
+                                          exercise: exercise,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                              .animate(key: ValueKey(_currentIndex))
+                              .fadeIn(duration: 350.ms)
+                              .scaleXY(begin: 0.96, curve: Curves.easeOutCubic),
+                    ),
+                    SizedBox(height: compact ? 14 : 22),
+
+                    // ── Glowing timer ───────────────────
+                    _PulseTimer(
+                      size: timerSize,
+                      progress: progress,
+                      seconds: _secondsLeft,
+                      running: running,
+                    ),
+                    SizedBox(height: compact ? 12 : 18),
+
+                    // ── Next up ─────────────────────────
+                    if (next != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _NextUp(exercise: next),
+                      )
+                    else
+                      Text(
+                        'Last exercise — finish strong! 💪',
+                        style: FpText.body(color: FpColors.lime),
+                      ),
+                    SizedBox(height: compact ? 12 : 18),
+
+                    // ── Controls ────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: GlowButton(
+                              label: 'Skip',
+                              icon: Icons.skip_next_rounded,
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.white.withValues(alpha: 0.10),
+                                  Colors.white.withValues(alpha: 0.06),
+                                ],
+                              ),
+                              textColor: FpColors.text,
+                              onTap: _skip,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            flex: 2,
+                            child: GlowButton(
+                              label: !_isRunning
+                                  ? 'Start'
+                                  : _isPaused
+                                  ? 'Resume'
+                                  : 'Pause',
+                              icon: running
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              onTap: _isRunning ? _pauseResume : _startTimer,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
-              ),
-              const Spacer(),
-
-              // Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _skip,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textGrey,
-                        side: const BorderSide(color: AppColors.border),
-                        minimumSize: const Size(0, 52),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Skip'),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: _isRunning ? _pauseResume : _startTimer,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: widget.color,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(0, 52),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        !_isRunning
-                            ? 'Start'
-                            : _isPaused
-                            ? 'Resume'
-                            : 'Pause',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-            ],
+                );
+              },
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ExerciseOverlay extends StatelessWidget {
+  final Exercise exercise;
+  const _ExerciseOverlay({required this.exercise});
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      radius: 20,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            exercise.name,
+            style: FpText.h1(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(exercise.reps, style: FpText.h3(color: FpColors.lime)),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(
+                Icons.accessibility_new_rounded,
+                size: 15,
+                color: FpColors.tealLight,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  exercise.musclesTargeted,
+                  style: FpText.muted(size: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NextUp extends StatelessWidget {
+  final Exercise exercise;
+  const _NextUp({required this.exercise});
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      radius: 18,
+      padding: const EdgeInsets.all(8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: ExerciseImage(exercise: exercise, radius: 12),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('NEXT UP', style: FpText.label(size: 10)),
+                Text(
+                  exercise.name,
+                  style: FpText.h3(),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Text(exercise.duration, style: FpText.muted(size: 12)),
+          const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
+}
+
+// Circular countdown with a glow that pulses while running
+class _PulseTimer extends StatelessWidget {
+  final double size;
+  final double progress;
+  final int seconds;
+  final bool running;
+
+  const _PulseTimer({
+    required this.size,
+    required this.progress,
+    required this.seconds,
+    required this.running,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Widget glow = Container(
+      width: size * 0.82,
+      height: size * 0.82,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: FpColors.teal.withValues(alpha: running ? 0.45 : 0.18),
+            blurRadius: 40,
+            spreadRadius: 4,
+          ),
+        ],
+      ),
+    );
+    if (running) {
+      glow = glow
+          .animate(onPlay: (c) => c.repeat(reverse: true))
+          .scaleXY(begin: 0.92, end: 1.08, duration: 1000.ms);
+    }
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          glow,
+          AnimatedRing(
+            progress: progress,
+            size: size,
+            stroke: 12,
+            duration: const Duration(milliseconds: 900),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('$seconds', style: FpText.display(size: size * 0.28)),
+                Text('seconds', style: FpText.label()),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

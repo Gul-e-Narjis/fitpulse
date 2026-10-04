@@ -39,7 +39,7 @@ class TealField extends StatelessWidget {
         prefixIcon: Icon(icon, color: AppColors.sageGreen, size: 20),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.card,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
@@ -75,7 +75,11 @@ class MobileOnlyNotice extends StatelessWidget {
   final IconData icon;
   final String feature;
 
-  const MobileOnlyNotice({super.key, required this.icon, required this.feature});
+  const MobileOnlyNotice({
+    super.key,
+    required this.icon,
+    required this.feature,
+  });
 
   @override
   Widget build(BuildContext context) {

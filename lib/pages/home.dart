@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
-import 'app_colors.dart';
 import '../services/app_state.dart';
 import '../services/exercise_data.dart';
+import '../theme/fp_theme.dart';
+import '../theme/fp_widgets.dart';
 import 'search_page.dart';
 import 'workout_detail.dart';
 import 'profile_screen.dart';
@@ -23,65 +25,33 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    HomeContent(),
-    SearchPage(),
-    HistoryScreen(),
-    ProfileScreen(),
+  static const _items = [
+    GlassNavItem(Icons.home_outlined, Icons.home_rounded, 'Home'),
+    GlassNavItem(Icons.search_outlined, Icons.search_rounded, 'Explore'),
+    GlassNavItem(Icons.history_outlined, Icons.history_rounded, 'History'),
+    GlassNavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
   ];
+
+  void _goTo(int i) => setState(() => _currentIndex = i);
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      HomeContent(onOpenProfile: () => _goTo(3)),
+      const SearchPage(),
+      const HistoryScreen(),
+      const ProfileScreen(),
+    ];
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (i) => setState(() => _currentIndex = i),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          selectedItemColor: AppColors.sageGreen,
-          unselectedItemColor: AppColors.textGrey,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 11,
-          ),
-          type: BottomNavigationBarType.fixed,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.search_outlined),
-              activeIcon: Icon(Icons.search_rounded),
-              label: 'Explore',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.history_outlined),
-              activeIcon: Icon(Icons.history_rounded),
-              label: 'History',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline_rounded),
-              activeIcon: Icon(Icons.person_rounded),
-              label: 'Profile',
-            ),
-          ],
-        ),
+      backgroundColor: FpColors.bg,
+      extendBody: true,
+      body: GradientBackground(
+        child: IndexedStack(index: _currentIndex, children: pages),
+      ),
+      bottomNavigationBar: GlassBottomNav(
+        index: _currentIndex,
+        items: _items,
+        onTap: _goTo,
       ),
     );
   }
@@ -89,7 +59,18 @@ class _HomeState extends State<Home> {
 
 // ── Home Content ─────────────────────────────────────────────────────────────
 class HomeContent extends StatelessWidget {
-  const HomeContent({super.key});
+  final VoidCallback? onOpenProfile;
+  const HomeContent({super.key, this.onOpenProfile});
+
+  static const weekdays = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
 
   String _greeting() {
     final h = DateTime.now().hour;
@@ -98,503 +79,466 @@ class HomeContent extends StatelessWidget {
     return 'Good Evening';
   }
 
+  void _push(BuildContext context, Widget page) =>
+      Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
+    final firstName = appState.userName.split(' ')[0];
+
+    final sections = <Widget>[
+      // ── Header ──────────────────────────────────
+      Row(
+        children: [
+          Bounce(
+            onTap: onOpenProfile,
+            child: FpAvatar(
+              seed: appState.avatarSeed,
+              size: 52,
+              fallbackInitial: firstName.isEmpty ? '' : firstName[0],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_greeting()}, $firstName 👋',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: FpText.h2(),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: FpColors.lime,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        appState.fitnessGoal,
+                        overflow: TextOverflow.ellipsis,
+                        style: FpText.muted(),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          GlassCard(
+            padding: const EdgeInsets.all(11),
+            radius: 16,
+            onTap: () => _push(context, const NotificationsScreen()),
+            child: const Icon(
+              Icons.notifications_none_rounded,
+              color: FpColors.text,
+              size: 22,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 22),
+
+      // ── Activity ring + streak ──────────────────
+      _ActivityCard(appState: appState),
+      const SizedBox(height: 14),
+
+      // ── Stat cards ──────────────────────────────
+      Row(
+        children: [
+          Expanded(
+            child: _StatCard(
+              value: appState.totalWorkoutsCompleted,
+              label: 'Workouts',
+              icon: Icons.fitness_center_rounded,
+              color: FpColors.tealLight,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _StatCard(
+              value: appState.totalMinutesWorkedOut,
+              label: 'Minutes',
+              icon: Icons.timer_rounded,
+              color: FpColors.sky,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _StatCard(
+              value: appState.totalCaloriesBurned.round(),
+              label: 'Calories',
+              icon: Icons.local_fire_department_rounded,
+              color: FpColors.coral,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 26),
+
+      // ── Today's workout hero ────────────────────
+      const SectionTitle("Today's workout"),
+      const SizedBox(height: 12),
+      _TodayHero(appState: appState),
+      const SizedBox(height: 26),
+
+      // ── Quick access ────────────────────────────
+      const SectionTitle('Quick access'),
+      const SizedBox(height: 12),
+      _QuickGrid(
+        tools: [
+          _QuickToolData(
+            Icons.insights_rounded,
+            'Progress',
+            FpColors.tealLight,
+            () => _push(context, const ProgressChartsScreen()),
+          ),
+          _QuickToolData(
+            Icons.calendar_month_rounded,
+            'Planner',
+            FpColors.violet,
+            () => _push(context, const WorkoutPlannerScreen()),
+          ),
+          _QuickToolData(
+            Icons.directions_walk_rounded,
+            'Steps',
+            FpColors.lime,
+            () => _push(context, const StepCounterScreen()),
+          ),
+          _QuickToolData(
+            Icons.speed_rounded,
+            'BMI',
+            FpColors.amber,
+            () => Navigator.pushNamed(context, '/bmi'),
+          ),
+          _QuickToolData(
+            Icons.tune_rounded,
+            'Custom',
+            FpColors.sky,
+            () => _push(context, const CustomWorkoutScreen()),
+          ),
+          _QuickToolData(
+            Icons.alarm_rounded,
+            'Reminders',
+            FpColors.coral,
+            () => _push(context, const NotificationsScreen()),
+          ),
+        ],
+      ),
+      const SizedBox(height: 26),
+
+      // ── This week ───────────────────────────────
+      _WeekStrip(appState: appState),
+      const SizedBox(height: 26),
+
+      // ── Today's plan ────────────────────────────
+      _TodaysPlan(appState: appState),
+      const SizedBox(height: 26),
+
+      // ── Categories ──────────────────────────────
+      const SectionTitle('Workout categories'),
+      const SizedBox(height: 12),
+      SizedBox(
+        height: 128,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
+          itemCount: ExerciseDataService.categories.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 12),
+          itemBuilder: (context, i) {
+            final cat = ExerciseDataService.categories[i];
+            return _CategoryTile(
+              category: cat,
+              onTap: () => _push(context, WorkoutDetailPage(category: cat)),
+            );
+          },
+        ),
+      ),
+      const SizedBox(height: 26),
+
+      // ── Recent workouts ─────────────────────────
+      SectionTitle(
+        'Recent workouts',
+        action: appState.workoutHistory.isNotEmpty ? 'See all' : null,
+        onAction: () => Navigator.pushNamed(context, '/history'),
+      ),
+      const SizedBox(height: 12),
+      if (appState.workoutHistory.isEmpty)
+        const _EmptyWorkouts()
+      else
+        ...appState.workoutHistory
+            .take(3)
+            .map((s) => _RecentWorkoutCard(session: s)),
+      const SizedBox(height: 26),
+
+      // ── Motivation ──────────────────────────────
+      const _MotivationCard(),
+    ];
 
     return SafeArea(
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── TOP HEADER ────────────────────────────
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF1E9FA3), Color(0xFF0A6B6F)],
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${_greeting()}  👋',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            appState.userName.split(' ')[0],
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.22),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              appState.fitnessGoal,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const NotificationsScreen(),
-                              ),
-                            ),
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.notifications_active_rounded,
-                                color: Color(0xFFFFD54F),
-                                size: 22,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          GestureDetector(
-                            onTap: () {},
-                            child: Container(
-                              width: 52,
-                              height: 52,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white.withValues(alpha: 0.22),
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                              ),
-                              child:
-                                  appState.userName == 'Fitness User' ||
-                                      appState.userName.isEmpty
-                                  ? const Icon(
-                                      Icons.person_rounded,
-                                      color: Colors.white,
-                                      size: 28,
-                                    )
-                                  : Center(
-                                      child: Text(
-                                        appState.userName[0].toUpperCase(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // ── 3 Stat Cards ──────────────────────
-                  Row(
-                    children: [
-                      _StatCard(
-                        value: '${appState.totalWorkoutsCompleted}',
-                        label: 'Workouts',
-                        icon: Icons.fitness_center_rounded,
-                        iconColor: const Color(0xFFFFE082),
-                      ),
-                      const SizedBox(width: 10),
-                      _StatCard(
-                        value: '${appState.totalMinutesWorkedOut}',
-                        label: 'Minutes',
-                        icon: Icons.timer_rounded,
-                        iconColor: const Color(0xFFB2EBF2),
-                      ),
-                      const SizedBox(width: 10),
-                      _StatCard(
-                        value: appState.totalCaloriesBurned.toStringAsFixed(0),
-                        label: 'Calories',
-                        icon: Icons.local_fire_department_rounded,
-                        iconColor: const Color(0xFFFFCCBC),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 22),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── QUICK ACCESS ──────────────────────
-                  const Text(
-                    'Quick Access',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      _QuickTool(
-                        icon: Icons.bar_chart_rounded,
-                        label: 'Progress',
-                        color: const Color(0xFF1E9FA3),
-                        bgColor: AppColors.softBlue,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ProgressChartsScreen(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      _QuickTool(
-                        icon: Icons.calendar_month_rounded,
-                        label: 'Planner',
-                        color: const Color(0xFF8B7CF6),
-                        bgColor: AppColors.softPurple,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const WorkoutPlannerScreen(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      _QuickTool(
-                        icon: Icons.directions_walk_rounded,
-                        label: 'Steps',
-                        color: const Color(0xFF43A047),
-                        bgColor: AppColors.softGreen,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const StepCounterScreen(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      _QuickTool(
-                        icon: Icons.calculate_outlined,
-                        label: 'BMI',
-                        color: const Color(0xFFE07B54),
-                        bgColor: AppColors.softOrange,
-                        onTap: () => Navigator.pushNamed(context, '/bmi'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _QuickTool(
-                        icon: Icons.tune_rounded,
-                        label: 'Custom',
-                        color: const Color(0xFF00897B),
-                        bgColor: const Color(0xFFE0F2F1),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const CustomWorkoutScreen(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      _QuickTool(
-                        icon: Icons.notifications_outlined,
-                        label: 'Reminders',
-                        color: const Color(0xFF7B61FF),
-                        bgColor: AppColors.softPurple,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const NotificationsScreen(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(child: SizedBox()),
-                      const SizedBox(width: 12),
-                      const Expanded(child: SizedBox()),
-                    ],
-                  ),
-
-                  const SizedBox(height: 26),
-
-                  // ── STREAK BANNER ─────────────────────
-                  _WeeklyStreakBanner(appState: appState),
-
-                  const SizedBox(height: 26),
-
-                  // ── TODAY'S PLAN ──────────────────────
-                  _TodaysPlan(appState: appState),
-
-                  const SizedBox(height: 26),
-
-                  // ── WORKOUT CATEGORIES ────────────────
-                  const Text(
-                    'Workout Categories',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    height: 110,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: ExerciseDataService.categories.length,
-                      itemBuilder: (context, i) {
-                        final cat = ExerciseDataService.categories[i];
-                        final color = ExerciseDataService.getCategoryColor(cat);
-                        final icon = ExerciseDataService.getCategoryIcon(cat);
-                        return GestureDetector(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => WorkoutDetailPage(category: cat),
-                            ),
-                          ),
-                          child: Container(
-                            width: 100,
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: color.withValues(alpha: 0.25),
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: color.withValues(alpha: 0.15),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(icon, color: color, size: 26),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  cat,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: color,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 26),
-
-                  // ── RECENT WORKOUTS ───────────────────
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Recent Workouts',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      if (appState.workoutHistory.isNotEmpty)
-                        TextButton(
-                          onPressed: () =>
-                              Navigator.pushNamed(context, '/history'),
-                          child: const Text(
-                            'See all',
-                            style: TextStyle(
-                              color: AppColors.sageGreen,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  appState.workoutHistory.isEmpty
-                      ? _EmptyWorkouts()
-                      : Column(
-                          children: appState.workoutHistory
-                              .take(3)
-                              .map((s) => _RecentWorkoutCard(session: s))
-                              .toList(),
-                        ),
-
-                  const SizedBox(height: 26),
-
-                  // ── MOTIVATION ────────────────────────
-                  _MotivationCard(),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ],
-        ),
+      bottom: false,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 110),
+        children: [
+          for (var i = 0; i < sections.length; i++)
+            sections[i]
+                .animate()
+                .fadeIn(
+                  delay: Duration(milliseconds: 40 * (i ~/ 2)),
+                  duration: 450.ms,
+                )
+                .slideY(begin: 0.08, curve: Curves.easeOutCubic),
+        ],
       ),
     );
   }
 }
 
-// ── Stat Card (improved visibility) ──────────────────────────────────────────
+// ── Activity Card ─────────────────────────────────────────────────────────────
+class _ActivityCard extends StatelessWidget {
+  final AppState appState;
+  const _ActivityCard({required this.appState});
+
+  @override
+  Widget build(BuildContext context) {
+    const weeklyGoal = 4;
+    final weekly = appState.weeklyWorkouts;
+    final streak = appState.currentStreak;
+    final todayMinutes = appState.last7DaysMinutes.last;
+    return GlassCard(
+      glow: FpColors.teal,
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          AnimatedRing(
+            progress: weekly / weeklyGoal,
+            size: 118,
+            stroke: 11,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CountUp(value: weekly, style: FpText.number(size: 28)),
+                Text('of $weeklyGoal', style: FpText.label()),
+              ],
+            ),
+          ),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'THIS WEEK',
+                  style: FpText.label(color: FpColors.tealLight),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  weekly >= weeklyGoal
+                      ? 'Weekly goal smashed!'
+                      : '${weeklyGoal - weekly} more to hit your goal',
+                  style: FpText.h3(),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Text('🔥', style: TextStyle(fontSize: 22))
+                        .animate(onPlay: (c) => c.repeat(reverse: true))
+                        .scaleXY(end: 1.18, duration: 900.ms),
+                    const SizedBox(width: 6),
+                    CountUp(
+                      value: streak,
+                      style: FpText.number(size: 20, color: FpColors.amber),
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'day streak',
+                        style: FpText.muted(size: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${todayMinutes.round()} min active today',
+                  style: FpText.muted(size: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Stat Card ─────────────────────────────────────────────────────────────────
 class _StatCard extends StatelessWidget {
-  final String value;
+  final num value;
   final String label;
   final IconData icon;
-  final Color iconColor;
+  final Color color;
 
   const _StatCard({
     required this.value,
     required this.label,
     required this.icon,
-    required this.iconColor,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.65), width: 1.5),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.5),
-                  width: 1.5,
-                ),
-              ),
-              child: Icon(icon, color: iconColor, size: 24),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.85),
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+      radius: 20,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TintIcon(icon, color: color, size: 34),
+          const SizedBox(height: 10),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: CountUp(value: value, style: FpText.number(size: 22)),
+          ),
+          Text(label, style: FpText.label(), overflow: TextOverflow.ellipsis),
+        ],
       ),
     );
   }
 }
 
-// ── Quick Tool ────────────────────────────────────────────────────────────────
-class _QuickTool extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final Color bgColor;
-  final VoidCallback onTap;
-
-  const _QuickTool({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.bgColor,
-    required this.onTap,
-  });
+// ── Today's hero (3D tilt) ────────────────────────────────────────────────────
+class _TodayHero extends StatelessWidget {
+  final AppState appState;
+  const _TodayHero({required this.appState});
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withValues(alpha: 0.2)),
+    final today = HomeContent.weekdays[DateTime.now().weekday - 1];
+    final plans = appState.getWorkoutsForDay(today);
+    final categories = ExerciseDataService.categories;
+    final category = plans.isNotEmpty
+        ? plans.first.category
+        : categories[DateTime.now().weekday % categories.length];
+    final exercises = ExerciseDataService.getByCategory(category);
+    final color = FpColors.forCategory(category);
+
+    void open() => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => WorkoutDetailPage(category: category)),
+    );
+
+    return TiltCard(
+      onTap: open,
+      child: Container(
+        height: 212,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(26),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withValues(alpha: 0.55),
+              FpColors.tealDeep.withValues(alpha: 0.65),
+              FpColors.surface,
+            ],
           ),
-          child: Column(
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.30),
+              blurRadius: 30,
+              spreadRadius: -8,
+              offset: const Offset(0, 14),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(26),
+          child: Stack(
             children: [
-              Icon(icon, color: color, size: 26),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: color,
+              if (exercises.isNotEmpty)
+                Positioned(
+                  right: -10,
+                  top: 0,
+                  bottom: 0,
+                  width: 170,
+                  child: ShaderMask(
+                    shaderCallback: (r) => const LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [Colors.transparent, Colors.black],
+                      stops: [0, 0.45],
+                    ).createShader(r),
+                    blendMode: BlendMode.dstIn,
+                    child: Opacity(
+                      opacity: 0.85,
+                      child: ExerciseImage(
+                        exercise: exercises.first,
+                        animate: true,
+                        radius: 0,
+                      ),
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        plans.isNotEmpty
+                            ? 'PLANNED • ${plans.first.time}'
+                            : 'SUGGESTED',
+                        style: FpText.label(color: FpColors.lime, size: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: 190,
+                      child: Text(
+                        '$category Blast',
+                        style: FpText.display(size: 24),
+                        maxLines: 2,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${exercises.length} exercises • ${ExerciseDataService.getCategoryDuration(category)}',
+                      style: FpText.body(
+                        color: FpColors.text.withValues(alpha: 0.75),
+                        size: 12,
+                      ),
+                    ),
+                    const Spacer(),
+                    GlowButton(
+                      label: 'Start',
+                      icon: Icons.play_arrow_rounded,
+                      expand: false,
+                      height: 42,
+                      onTap: open,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -605,101 +549,81 @@ class _QuickTool extends StatelessWidget {
   }
 }
 
-// ── Weekly Streak Banner ──────────────────────────────────────────────────────
-class _WeeklyStreakBanner extends StatelessWidget {
-  final AppState appState;
-  const _WeeklyStreakBanner({required this.appState});
+// ── Quick access grid ─────────────────────────────────────────────────────────
+class _QuickToolData {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _QuickToolData(this.icon, this.label, this.color, this.onTap);
+}
 
-  int get _streak {
-    if (appState.workoutHistory.isEmpty) return 0;
-    int s = 0;
-    final now = DateTime.now();
-    for (int i = 0; i < 30; i++) {
-      final day = now.subtract(Duration(days: i));
-      final worked = appState.workoutHistory.any((w) {
-        final d = DateTime.parse(w.date);
-        return d.year == day.year && d.month == day.month && d.day == day.day;
-      });
-      if (worked) {
-        s++;
-      } else if (i > 0) {
-        break;
-      }
-    }
-    return s;
-  }
+class _QuickGrid extends StatelessWidget {
+  final List<_QuickToolData> tools;
+  const _QuickGrid({required this.tools});
 
   @override
   Widget build(BuildContext context) {
-    final streak = _streak;
-    final weekly = appState.weeklyWorkouts;
-    final now = DateTime.now();
-    final dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    return GridView.count(
+      crossAxisCount: 3,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 1.15,
+      padding: EdgeInsets.zero,
+      children: [
+        for (var i = 0; i < tools.length; i++)
+          GlassCard(
+                radius: 20,
+                padding: const EdgeInsets.all(8),
+                onTap: tools[i].onTap,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TintIcon(tools[i].icon, color: tools[i].color, size: 40),
+                    const SizedBox(height: 8),
+                    Text(
+                      tools[i].label,
+                      style: FpText.label(color: FpColors.text, size: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              )
+              .animate()
+              .fadeIn(delay: (60 * i).ms)
+              .scaleXY(begin: 0.85, curve: Curves.easeOutBack),
+      ],
+    );
+  }
+}
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1E9FA3), Color(0xFF0A6B6F)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1E9FA3).withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
+// ── Week strip ────────────────────────────────────────────────────────────────
+class _WeekStrip extends StatelessWidget {
+  final AppState appState;
+  const _WeekStrip({required this.appState});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final weekly = appState.weeklyWorkouts;
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Text('🔥', style: TextStyle(fontSize: 24)),
-                        const SizedBox(width: 8),
-                        Text(
-                          streak == 0
-                              ? 'Start Your Streak!'
-                              : '$streak Day${streak == 1 ? '' : 's'} Streak!',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$weekly workout${weekly == 1 ? '' : 's'} this week  •  Keep going! 💪',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.emoji_events_rounded,
-                color: Colors.white,
-                size: 46,
+              Expanded(child: Text('Last 7 days', style: FpText.h3())),
+              Text(
+                '$weekly workout${weekly == 1 ? '' : 's'} this week',
+                style: FpText.muted(size: 12),
               ),
             ],
           ),
-
-          const SizedBox(height: 16),
-
-          // ── 7-day indicator with labels ───────────
+          const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (i) {
@@ -713,54 +637,45 @@ class _WeeklyStreakBanner extends StatelessWidget {
               });
               return Column(
                 children: [
-                  // Day label
                   Text(
                     dayLabels[day.weekday - 1],
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: FpText.label(size: 10),
                   ),
-                  const SizedBox(height: 5),
-                  // Circle
-                  Container(
+                  const SizedBox(height: 6),
+                  AnimatedContainer(
+                    duration: 400.ms,
                     width: 34,
                     height: 34,
                     decoration: BoxDecoration(
-                      color: worked
-                          ? Colors.white
-                          : isToday
-                          ? Colors.white.withValues(alpha: 0.35)
-                          : Colors.white.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
+                      gradient: worked ? FpColors.accentGradient : null,
+                      color: worked
+                          ? null
+                          : Colors.white.withValues(
+                              alpha: isToday ? 0.10 : 0.05,
+                            ),
                       border: isToday && !worked
-                          ? Border.all(color: Colors.white, width: 2)
+                          ? Border.all(color: FpColors.tealLight, width: 1.5)
+                          : null,
+                      boxShadow: worked
+                          ? [
+                              BoxShadow(
+                                color: FpColors.lime.withValues(alpha: 0.35),
+                                blurRadius: 12,
+                              ),
+                            ]
                           : null,
                     ),
                     child: worked
                         ? const Icon(
                             Icons.check_rounded,
                             size: 18,
-                            color: Color(0xFF1E9FA3),
-                          )
-                        : isToday
-                        ? const Icon(
-                            Icons.radio_button_unchecked,
-                            size: 18,
-                            color: Colors.white,
+                            color: FpColors.bgDeep,
                           )
                         : null,
                   ),
                   const SizedBox(height: 4),
-                  // Date number
-                  Text(
-                    '${day.day}',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.65),
-                      fontSize: 10,
-                    ),
-                  ),
+                  Text('${day.day}', style: FpText.muted(size: 10)),
                 ],
               );
             }),
@@ -778,177 +693,151 @@ class _TodaysPlan extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final days = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
-    ];
-    final today = days[DateTime.now().weekday - 1];
+    final today = HomeContent.weekdays[DateTime.now().weekday - 1];
     final plans = appState.getWorkoutsForDay(today);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "Today's Plan — $today",
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark,
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const WorkoutPlannerScreen()),
-              ),
-              child: const Text(
-                'Edit',
-                style: TextStyle(
-                  color: AppColors.sageGreen,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+        SectionTitle(
+          "Today's plan — $today",
+          action: 'Edit',
+          onAction: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const WorkoutPlannerScreen()),
+          ),
         ),
-        const SizedBox(height: 10),
-        plans.isEmpty
-            ? Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
+        const SizedBox(height: 12),
+        if (plans.isEmpty)
+          GlassCard(
+            child: Row(
+              children: [
+                const TintIcon(
+                  Icons.event_available_outlined,
+                  color: FpColors.tealLight,
                 ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Rest day 😴', style: FpText.h3()),
+                      Text(
+                        'No workouts planned — enjoy the rest!',
+                        style: FpText.muted(size: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ...plans.map((plan) {
+            final color = FpColors.forCategory(plan.category);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: GlassCard(
+                padding: const EdgeInsets.all(14),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.softBlue,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.event_available_outlined,
-                        color: AppColors.sageGreen,
-                        size: 24,
+                    TintIcon(
+                      ExerciseDataService.getCategoryIcon(plan.category),
+                      color: color,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(plan.category, style: FpText.h3()),
+                          Text(plan.time, style: FpText.muted(size: 12)),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Rest Day 😴',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textDark,
-                            fontSize: 15,
-                          ),
+                    GlowButton(
+                      label: 'Start',
+                      expand: false,
+                      height: 38,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              WorkoutDetailPage(category: plan.category),
                         ),
-                        Text(
-                          'No workouts planned — enjoy the rest!',
-                          style: TextStyle(
-                            color: AppColors.textGrey,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-              )
-            : Column(
-                children: plans.map((plan) {
-                  final color = ExerciseDataService.getCategoryColor(
-                    plan.category,
-                  );
-                  final icon = ExerciseDataService.getCategoryIcon(
-                    plan.category,
-                  );
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: color.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(icon, color: color, size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                plan.category,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              Text(
-                                plan.time,
-                                style: const TextStyle(
-                                  color: AppColors.textGrey,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  WorkoutDetailPage(category: plan.category),
-                            ),
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.sageGreen,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              'Start',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
               ),
+            );
+          }),
       ],
+    );
+  }
+}
+
+// ── Category tile ─────────────────────────────────────────────────────────────
+class _CategoryTile extends StatelessWidget {
+  final String category;
+  final VoidCallback onTap;
+  const _CategoryTile({required this.category, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = FpColors.forCategory(category);
+    final first = ExerciseDataService.getByCategory(category).firstOrNull;
+    return Bounce(
+      onTap: onTap,
+      child: Container(
+        width: 112,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (first != null) ExerciseImage(exercise: first, radius: 0),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      color.withValues(alpha: 0.15),
+                      FpColors.bgDeep.withValues(alpha: 0.92),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Icon(
+                      ExerciseDataService.getCategoryIcon(category),
+                      color: color,
+                      size: 22,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      category,
+                      style: FpText.h3().copyWith(fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -960,68 +849,52 @@ class _RecentWorkoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = ExerciseDataService.getCategoryColor(session.category);
-    final icon = ExerciseDataService.getCategoryIcon(session.category);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+    final color = FpColors.forCategory(session.category);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GlassCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            TintIcon(
+              ExerciseDataService.getCategoryIcon(session.category),
+              color: color,
+              size: 46,
             ),
-            child: Icon(icon, color: color, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${session.category} Workout',
+                    style: FpText.h3(),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    session.partial
+                        ? '${session.date.substring(0, 10)} • partial'
+                        : session.date.substring(0, 10),
+                    style: FpText.muted(size: 12),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${session.category} Workout',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                    fontSize: 14,
-                  ),
+                  '${session.durationMinutes} min',
+                  style: FpText.number(size: 14),
                 ),
                 Text(
-                  session.date.substring(0, 10),
-                  style: const TextStyle(
-                    color: AppColors.textGrey,
-                    fontSize: 12,
-                  ),
+                  '${session.caloriesBurned.toStringAsFixed(0)} cal',
+                  style: FpText.muted(size: 12),
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${session.durationMinutes} min',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-              Text(
-                '${session.caloriesBurned.toStringAsFixed(0)} cal',
-                style: const TextStyle(fontSize: 12, color: AppColors.textGrey),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1029,63 +902,40 @@ class _RecentWorkoutCard extends StatelessWidget {
 
 // ── Empty Workouts ────────────────────────────────────────────────────────────
 class _EmptyWorkouts extends StatelessWidget {
+  const _EmptyWorkouts();
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
-      ),
+    return GlassCard(
+      padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.softBlue,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.fitness_center_rounded,
-              size: 40,
-              color: AppColors.sageGreen,
-            ),
+          const TintIcon(
+            Icons.fitness_center_rounded,
+            color: FpColors.tealLight,
+            size: 64,
           ),
           const SizedBox(height: 14),
-          const Text(
-            'No workouts yet',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
-            ),
-          ),
+          Text('No workouts yet', style: FpText.h3()),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Complete a workout to see your history here!',
-            style: TextStyle(fontSize: 13, color: AppColors.textGrey),
+            style: FpText.muted(),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.push(
+          GlowButton(
+            label: 'Start a workout',
+            icon: Icons.play_arrow_rounded,
+            expand: false,
+            height: 44,
+            onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => WorkoutDetailPage(
                   category: ExerciseDataService.categories.first,
                 ),
               ),
-            ),
-            icon: const Icon(Icons.play_arrow_rounded, size: 18),
-            label: const Text('Start a Workout'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.sageGreen,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
             ),
           ),
         ],
@@ -1096,34 +946,29 @@ class _EmptyWorkouts extends StatelessWidget {
 
 // ── Motivation Card ───────────────────────────────────────────────────────────
 class _MotivationCard extends StatelessWidget {
-  final List<Map<String, String>> _quotes = const [
-    {
-      'q': 'Push yourself, because no one else is going to do it for you.',
-      'a': 'Unknown',
-    },
-    {
-      'q': 'The only bad workout is the one that didn\'t happen.',
-      'a': 'Unknown',
-    },
-    {
-      'q':
-          'Your body can stand almost anything. It\'s your mind you have to convince.',
-      'a': 'Unknown',
-    },
-    {'q': 'Success starts with self-discipline.', 'a': 'Unknown'},
-    {'q': 'Don\'t wish for it. Work for it.', 'a': 'Unknown'},
+  const _MotivationCard();
+
+  static const _quotes = [
+    'Push yourself, because no one else is going to do it for you.',
+    'The only bad workout is the one that didn\'t happen.',
+    'Your body can stand almost anything. It\'s your mind you have to convince.',
+    'Success starts with self-discipline.',
+    'Don\'t wish for it. Work for it.',
   ];
 
   @override
   Widget build(BuildContext context) {
     final q = _quotes[DateTime.now().day % _quotes.length];
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.softPurple,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFB39DDB).withValues(alpha: 0.3)),
+    return GlassCard(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          FpColors.violet.withValues(alpha: 0.20),
+          FpColors.teal.withValues(alpha: 0.08),
+        ],
       ),
+      padding: const EdgeInsets.all(20),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1134,23 +979,16 @@ class _MotivationCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  q['q']!,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF4527A0),
-                    fontWeight: FontWeight.w500,
-                    height: 1.5,
+                  q,
+                  style: FpText.body(size: 14).copyWith(
                     fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '— Daily Motivation',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: const Color(0xFF4527A0).withValues(alpha: 0.6),
-                    fontWeight: FontWeight.w600,
-                  ),
+                  '— Daily motivation',
+                  style: FpText.label(color: FpColors.violet),
                 ),
               ],
             ),

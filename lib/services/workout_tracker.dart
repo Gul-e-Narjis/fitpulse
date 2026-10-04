@@ -72,7 +72,10 @@ class WorkoutTracker {
 
   // Builds the session to save. For an early exit the exercise in progress
   // is credited too, since that time was really spent.
-  WorkoutSession buildSession({required String category, bool partial = false}) {
+  WorkoutSession buildSession({
+    required String category,
+    bool partial = false,
+  }) {
     var seconds = _doneSeconds;
     var count = _doneExercises;
     var calories = _doneCalories;

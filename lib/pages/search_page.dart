@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/exercise_data.dart';
 import 'exercise_detail.dart';
 import 'app_colors.dart';
+import '../theme/fp_widgets.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -46,7 +47,8 @@ class _SearchPageState extends State<SearchPage> {
   void _search(String query) {
     setState(() {
       _results = ExerciseDataService.allExercises.where((e) {
-        final matchesQuery = query.isEmpty ||
+        final matchesQuery =
+            query.isEmpty ||
             e.name.toLowerCase().contains(query.toLowerCase()) ||
             e.description.toLowerCase().contains(query.toLowerCase()) ||
             e.musclesTargeted.toLowerCase().contains(query.toLowerCase());
@@ -182,10 +184,10 @@ class _SearchPageState extends State<SearchPage> {
                 final color = diff == 'All'
                     ? AppColors.textGrey
                     : diff == 'Beginner'
-                        ? AppColors.sageGreen
-                        : diff == 'Intermediate'
-                            ? const Color(0xFFE8956D)
-                            : Colors.red;
+                    ? AppColors.sageGreen
+                    : diff == 'Intermediate'
+                    ? const Color(0xFFE8956D)
+                    : Colors.red;
 
                 return GestureDetector(
                   onTap: () {
@@ -254,7 +256,7 @@ class _SearchPageState extends State<SearchPage> {
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
                     itemCount: _results.length,
                     itemBuilder: (context, index) {
                       final exercise = _results[index];
@@ -280,16 +282,12 @@ class _SearchPageState extends State<SearchPage> {
                           ),
                           child: Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: color.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  exercise.icon,
-                                  color: color,
-                                  size: 22,
+                              SizedBox(
+                                width: 56,
+                                height: 56,
+                                child: ExerciseImage(
+                                  exercise: exercise,
+                                  radius: 12,
                                 ),
                               ),
                               const SizedBox(width: 14),
