@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'theme/fp_theme.dart';
 import 'services/app_state.dart';
+import 'services/notification_center.dart';
+import 'pages/in_app_banner.dart';
 import 'pages/intro_screen.dart';
 import 'pages/landing.dart';
 import 'pages/login.dart';
@@ -41,8 +43,11 @@ Future<void> main() async {
   }
 
   runApp(
-    ChangeNotifierProvider.value(
-      value: appState,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: appState),
+        ChangeNotifierProvider(create: (_) => NotificationCenter(appState)),
+      ],
       child: MyApp(
         initialRoute: !signedIn
             ? (introSeen ? '/landing' : '/intro')
@@ -58,12 +63,20 @@ class MyApp extends StatelessWidget {
   final String initialRoute;
   const MyApp({super.key, required this.initialRoute});
 
+  static final navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'FitPulse — Fitness Tracker',
       debugShowCheckedModeBanner: false,
       theme: FpTheme.dark(),
+      navigatorKey: navigatorKey,
+      // In-app notification banners slide in above every screen
+      builder: (context, child) => InAppBannerHost(
+        navigatorKey: navigatorKey,
+        child: child ?? const SizedBox(),
+      ),
       initialRoute: initialRoute,
       routes: {
         '/intro': (_) => const IntroScreen(),

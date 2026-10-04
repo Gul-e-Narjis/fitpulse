@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../services/app_state.dart';
 import '../services/exercise_data.dart';
+import '../services/notification_center.dart';
 import '../theme/fp_theme.dart';
 import '../theme/fp_widgets.dart';
 import 'search_page.dart';
@@ -140,16 +141,7 @@ class HomeContent extends StatelessWidget {
               ],
             ),
           ),
-          GlassCard(
-            padding: const EdgeInsets.all(11),
-            radius: 16,
-            onTap: () => _push(context, const NotificationsScreen()),
-            child: const Icon(
-              Icons.notifications_none_rounded,
-              color: FpColors.text,
-              size: 22,
-            ),
-          ),
+          _BellButton(onTap: () => _push(context, const NotificationsScreen())),
         ],
       ),
       const SizedBox(height: 22),
@@ -1092,6 +1084,65 @@ class _CoachBanner extends StatelessWidget {
           const Icon(Icons.chevron_right_rounded, color: FpColors.muted),
         ],
       ),
+    );
+  }
+}
+
+// ── Bell with unread count ────────────────────────────────────────────────────
+class _BellButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _BellButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final unread = context.watch<NotificationCenter>().unreadCount;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        GlassCard(
+          padding: const EdgeInsets.all(11),
+          radius: 16,
+          onTap: onTap,
+          child: Icon(
+            unread > 0
+                ? Icons.notifications_active_rounded
+                : Icons.notifications_none_rounded,
+            color: FpColors.text,
+            size: 22,
+          ),
+        ),
+        if (unread > 0)
+          Positioned(
+            right: -4,
+            top: -4,
+            child:
+                IgnorePointer(
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 20),
+                        height: 20,
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [FpColors.coral, FpColors.amber],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: FpColors.bg, width: 2),
+                        ),
+                        child: Text(
+                          unread > 9 ? '9+' : '$unread',
+                          style: FpText.label(color: Colors.white, size: 10),
+                        ),
+                      ),
+                    )
+                    .animate(key: ValueKey(unread))
+                    .scaleXY(
+                      begin: 0.4,
+                      curve: Curves.elasticOut,
+                      duration: 700.ms,
+                    ),
+          ),
+      ],
     );
   }
 }

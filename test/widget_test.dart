@@ -7,6 +7,7 @@ import 'package:fit_pulse/pages/home.dart';
 import 'package:fit_pulse/pages/workout_detail.dart';
 import 'package:fit_pulse/services/app_state.dart';
 import 'package:fit_pulse/services/exercise_data.dart';
+import 'package:fit_pulse/services/notification_center.dart';
 
 void main() {
   GoogleFonts.config.allowRuntimeFetching = false;
@@ -19,8 +20,11 @@ void main() {
     final appState = AppState();
     final navKey = GlobalKey<NavigatorState>();
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: appState,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: appState),
+          ChangeNotifierProvider(create: (_) => NotificationCenter(appState)),
+        ],
         child: MaterialApp(navigatorKey: navKey, home: const Home()),
       ),
     );

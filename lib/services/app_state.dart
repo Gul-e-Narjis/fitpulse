@@ -184,9 +184,6 @@ class AppState extends ChangeNotifier {
   double? _goalWeight;
   double? _startWeight;
 
-  // ── Notifications ──────────────────────
-  bool _notificationsEnabled = true;
-
   // ── Water (date → glasses) ─────────────
   Map<String, int> _water = {};
 
@@ -350,9 +347,6 @@ class AppState extends ChangeNotifier {
     if (total.abs() < 0.05) return 1;
     return ((startWeight - currentWeight) / total).clamp(0.0, 1.0);
   }
-
-  // ── Getters — Notifications ────────────
-  bool get notificationsEnabled => _notificationsEnabled;
 
   // ── BMI ────────────────────────────────
   double get bmi {
@@ -645,13 +639,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Notifications ──────────────────────
-  void setNotifications(bool value) {
-    _notificationsEnabled = value;
-    _save();
-    notifyListeners();
-  }
-
   // ── Friends ────────────────────────────
   void setFriends(List<String> uids) {
     _friends = uids;
@@ -687,7 +674,6 @@ class AppState extends ChangeNotifier {
           if (_avatarSeed != null) 'avatarSeed': _avatarSeed,
         },
         'onboarded': _onboarded,
-        'notificationsEnabled': _notificationsEnabled,
         'streak': currentStreak,
         'xp': xp,
         'water': _water,
@@ -760,7 +746,6 @@ class AppState extends ChangeNotifier {
     _startWeight = (profile['startWeight'] as num?)?.toDouble();
     // Accounts created before onboarding existed skip it
     _onboarded = data['onboarded'] as bool? ?? true;
-    _notificationsEnabled = data['notificationsEnabled'] as bool? ?? true;
     _workoutHistory = _mapList(data['workoutHistory'], WorkoutSession.fromMap);
     _plannedWorkouts = _mapList(
       data['plannedWorkouts'],
@@ -803,7 +788,6 @@ class AppState extends ChangeNotifier {
     _workoutHistory = [];
     _plannedWorkouts = [];
     _bmiHistory = [];
-    _notificationsEnabled = true;
     _water = {};
     _badges = {};
     _pendingBadges.clear();
