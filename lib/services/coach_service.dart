@@ -152,6 +152,16 @@ How to respond:
   // Friendly text for errors such as Firebase AI Logic not being enabled
   static String describeError(Object e) {
     final msg = e.toString().toLowerCase();
+    if (msg.contains('app check') ||
+        msg.contains('appcheck') ||
+        msg.contains('app-check')) {
+      return kDebugMode
+          ? 'App Check blocked this request. Add the debug token from the '
+                'browser console in Firebase console → App Check → Manage '
+                'debug tokens, then reload.'
+          : 'This device couldn\'t be verified (App Check). Please reload '
+                'the page and try again.';
+    }
     if (msg.contains('api has not been used') ||
         msg.contains('not enabled') ||
         msg.contains('permission') ||

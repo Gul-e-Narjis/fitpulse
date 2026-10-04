@@ -129,7 +129,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     ),
                   )
                 else if (top.isNotEmpty)
-                  _Podium(top: top),
+                  LeaderboardPodium(top: top),
                 if (_error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
@@ -247,9 +247,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 }
 
 // ── Podium: 2nd · 1st · 3rd, rising up ────────────────────────────────────────
-class _Podium extends StatelessWidget {
+// The row sizes itself to the tallest slot, so it never clips its content.
+class LeaderboardPodium extends StatelessWidget {
   final List<FriendProfile> top;
-  const _Podium({required this.top});
+  const LeaderboardPodium({super.key, required this.top});
 
   @override
   Widget build(BuildContext context) {
@@ -259,18 +260,15 @@ class _Podium extends StatelessWidget {
       (1, top[0]),
       if (top.length > 2) (3, top[2]),
     ];
-    return SizedBox(
-      height: 270,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          for (final (rank, p) in slots)
-            Expanded(
-              child: _PodiumSlot(rank: rank, profile: p),
-            ),
-        ],
-      ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (final (rank, p) in slots)
+          Expanded(
+            child: _PodiumSlot(rank: rank, profile: p),
+          ),
+      ],
     );
   }
 }
@@ -295,7 +293,7 @@ class _PodiumSlot extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
         children: [
           if (rank == 1)
             const Text('👑', style: TextStyle(fontSize: 26))
