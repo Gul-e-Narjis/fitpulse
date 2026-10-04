@@ -1,33 +1,98 @@
-# fit_pulse
+# FitPulse 💪
 
-A new Flutter project.
+FitPulse is a fitness tracker for the web built with Flutter and Firebase. It
+combines guided workouts with an AI coach, a personalised weekly plan,
+gamification, hydration and weight tracking, and a friends leaderboard. The
+whole app uses a dark "neon HUD" design.
 
-## Getting Started
+**🔗 Live app:** https://fitpulse-ccb08.web.app
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## ✨ Features
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **AI Coach ("Pulse")**: a chat coach powered by Gemini through Firebase AI
+  Logic. It knows your goal, level, body stats and recent workouts, streams its
+  replies, offers suggestion chips, and declines medical questions. Chat history
+  is saved per user.
+- **Smart onboarding**: four animated questions (goal, height/weight, level,
+  days per week) build a personalised weekly plan that shows up in the Planner
+  and on Home.
+- **XP, levels and badges**: earn XP from the time you actually exercise. There
+  are 10 levels from *Beginner* to *Legend* and 10 badges (first workout,
+  streaks, workout milestones, Early Bird, Hydration Hero…). A confetti popup
+  celebrates each new badge.
+- **Guided workouts**: a glowing circular timer with a "next up" preview.
+  Minutes and calories come from time actually exercised; skipped exercises
+  don't count. If you quit after at least a minute, the session is saved as a
+  partial workout.
+- **Exercise visuals**: two-frame movement images from
+  [free-exercise-db](https://github.com/yuhonas/free-exercise-db), "How to do
+  it" steps, and thumbnails throughout the app.
+- **Water tracker**: an animated wave bottle. The daily goal comes from your
+  body weight, and progress is stored per date.
+- **Weight progress**: log your weight by date and set a goal weight. You get a
+  gradient line chart, kg lost / to go, a progress ring and an editable history.
+- **Friends leaderboard**: add friends with a 6-character invite code and
+  compete on weekly XP with an animated top-3 podium. Friends only see a
+  public card (name, avatar, level, XP).
+- **Share card**: after a workout, export a summary card as a PNG, or share it
+  with the Web Share API where the browser supports it.
+- **In-app notifications**: a notification center with unread badges, mark all
+  read and swipe to delete. Smart alerts cover streak-at-risk, workout and water
+  reminders, weight logging, weekly goal, badges and leaderboard weeks, and they
+  slide in as glass banners while the app is open.
+- **Also included**: workout history, progress charts, BMI gauge, workout
+  planner, custom workouts, exercise search, DiceBear avatars, a neon intro with
+  Ken Burns photos, and guest mode.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🛠 Tech stack
 
-## ⚠️ Before a production build / deploy
+| Area | Technology |
+|------|------------|
+| App | Flutter (web), Provider, `flutter_animate`, `fl_chart`, Google Fonts |
+| Auth | Firebase Authentication (email/password) |
+| Data | Cloud Firestore with security rules |
+| AI | Firebase AI Logic (Gemini Developer API) |
+| Hosting | Firebase Hosting |
 
-Firebase App Check is set up for local testing with a **debug token**:
+## 🗂 Data model (Firestore)
 
-1. **Remove the debug token from `web/index.html`** — delete this line (and its comment):
-   ```html
-   <script>self.FIREBASE_APPCHECK_DEBUG_TOKEN = "…";</script>
-   ```
-   It is only for `localhost`. Anyone can read it from the page source and it
-   would let them bypass App Check. Release builds also clear it at runtime as
-   a safety net, but it must not be shipped.
-2. Also delete that debug token in Firebase Console → App Check → Apps →
-   `fit_pulse (web)` → ⋮ → **Manage debug tokens** if it was ever deployed.
-3. Make sure the reCAPTCHA v3 **site key** is set in `lib/app_check_config.dart`
-   (or pass `--dart-define=RECAPTCHA_SITE_KEY=...` to `flutter build web`).
-   Release builds use `ReCaptchaV3Provider`; debug builds use the debug token.
+```
+users/{uid}                    profile, workouts, plan, water, badges (private)
+users/{uid}/weights/{id}       weight entries
+users/{uid}/notifications/{id} in-app notifications
+users/{uid}/coachChats/{id}    AI coach conversation
+users/{uid}/meta/notifications reminder settings
+publicProfiles/{uid}           leaderboard card (owner + friends only)
+inviteCodes/{code}             invite code → uid lookup
+```
+
+## 🚀 Run locally
+
+Prerequisites: the Flutter SDK (3.35+) and the Firebase CLI.
+
+```bash
+git clone https://github.com/Gul-e-Narjis/FitPulse.git
+cd FitPulse
+flutter pub get
+flutter run -d chrome
+```
+
+To use your own Firebase project instead, run `flutterfire configure` and then
+enable these in the Firebase console:
+
+- Email/Password sign-in
+- Cloud Firestore
+- Firebase AI Logic (Gemini Developer API)
+
+## 🌐 Deploy
+
+```bash
+flutter build web --release
+firebase deploy --only "hosting,firestore:rules" --project fitpulse-ccb08
+```
+
+---
+
+Made by **Gul-e-Narjis**.
