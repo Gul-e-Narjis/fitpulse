@@ -8,9 +8,7 @@ import 'package:fit_pulse/services/app_state.dart';
 import 'package:fit_pulse/services/exercise_data.dart';
 
 void main() {
-  testWidgets('Completing a workout updates Home stats and history', (
-    tester,
-  ) async {
+  testWidgets('Only time actually exercised is recorded', (tester) async {
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -26,34 +24,40 @@ void main() {
     await tester.pumpAndSettle();
 
     final category = ExerciseDataService.categories.first;
-    final count = ExerciseDataService.getByCategory(category).length;
+    final exercises = ExerciseDataService.getByCategory(category);
     navKey.currentState!.push(
       MaterialPageRoute(builder: (_) => WorkoutDetailPage(category: category)),
     );
     await tester.pumpAndSettle();
-
     await tester.tap(find.text('Start Workout'));
     await tester.pumpAndSettle();
 
-    // Skip through every exercise to finish the workout
-    for (var i = 0; i < count; i++) {
+    // Do the first two exercises for real, skip the rest
+    var expectedSeconds = 0;
+    for (var i = 0; i < 2; i++) {
+      final secs = ExerciseDataService.durationSeconds(exercises[i]);
+      expectedSeconds += secs;
+      await tester.tap(find.text('Start'));
+      for (var s = 0; s <= secs; s++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      await tester.pumpAndSettle();
+    }
+    for (var i = 2; i < exercises.length; i++) {
       await tester.tap(find.text('Skip'));
       await tester.pumpAndSettle();
     }
 
     expect(find.text('🎉 Workout Complete!'), findsOneWidget);
     expect(appState.totalWorkoutsCompleted, 1);
-    expect(appState.workoutHistory.first.category, category);
+    final session = appState.workoutHistory.first;
+    expect(session.durationSeconds, expectedSeconds);
+    expect(session.exercisesCompleted, 2);
+    expect(session.partial, isFalse);
 
     await tester.tap(find.text('Back to Home'));
     await tester.pumpAndSettle();
-
     expect(find.byType(HomeContent), findsOneWidget);
-    expect(appState.totalMinutesWorkedOut, greaterThan(0));
-    expect(
-      find.text('${appState.totalMinutesWorkedOut}'),
-      findsWidgets,
-    );
 
     // History tab lists the completed workout
     await tester.tap(find.text('History'));

@@ -9,6 +9,12 @@ class WorkoutSession {
   final int durationMinutes;
   final int exercisesCompleted;
   final double caloriesBurned;
+  // Actual active time; older sessions only stored whole minutes
+  final int durationSeconds;
+  // Ended early from the ✕ button
+  final bool partial;
+  // Local start time (ISO-8601), used for time-of-day badges
+  final String? startedAt;
 
   WorkoutSession({
     required this.category,
@@ -16,22 +22,31 @@ class WorkoutSession {
     required this.durationMinutes,
     required this.exercisesCompleted,
     required this.caloriesBurned,
-  });
+    int? durationSeconds,
+    this.partial = false,
+    this.startedAt,
+  }) : durationSeconds = durationSeconds ?? durationMinutes * 60;
 
   Map<String, dynamic> toMap() => {
     'category': category,
     'date': date,
     'durationMinutes': durationMinutes,
+    'durationSeconds': durationSeconds,
     'exercisesCompleted': exercisesCompleted,
     'caloriesBurned': caloriesBurned,
+    'partial': partial,
+    if (startedAt != null) 'startedAt': startedAt,
   };
 
   static WorkoutSession fromMap(Map<String, dynamic> m) => WorkoutSession(
     category: m['category'] as String,
     date: m['date'] as String,
     durationMinutes: (m['durationMinutes'] as num).toInt(),
+    durationSeconds: (m['durationSeconds'] as num?)?.toInt(),
     exercisesCompleted: (m['exercisesCompleted'] as num).toInt(),
     caloriesBurned: (m['caloriesBurned'] as num).toDouble(),
+    partial: m['partial'] as bool? ?? false,
+    startedAt: m['startedAt'] as String?,
   );
 }
 
@@ -142,7 +157,8 @@ class AppState extends ChangeNotifier {
   int get totalWorkoutsCompleted => _workoutHistory.length;
 
   int get totalMinutesWorkedOut =>
-      _workoutHistory.fold(0, (total, s) => total + s.durationMinutes);
+      (_workoutHistory.fold(0, (total, s) => total + s.durationSeconds) / 60)
+          .round();
 
   double get totalCaloriesBurned =>
       _workoutHistory.fold(0.0, (total, s) => total + s.caloriesBurned);

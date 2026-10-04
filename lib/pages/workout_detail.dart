@@ -4,6 +4,7 @@ import '../services/exercise_data.dart';
 import '../services/app_state.dart';
 import 'exercise_detail.dart';
 import 'app_colors.dart';
+import '../services/workout_tracker.dart';
 
 class WorkoutDetailPage extends StatelessWidget {
   final String category;
@@ -292,24 +293,23 @@ class WorkoutSessionPage extends StatefulWidget {
 }
 
 class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
-  int _currentIndex = 0;
-  int _secondsLeft = 30;
+  late final WorkoutTracker _tracker;
   bool _isRunning = false;
   bool _isPaused = false;
   bool _completed = false;
   // Bumped whenever the timer restarts so only one _tick loop stays alive
   int _tickId = 0;
 
+  int get _currentIndex => _tracker.index;
+  int get _secondsLeft => _tracker.secondsLeft;
+
   @override
   void initState() {
     super.initState();
-    _resetTimer();
-  }
-
-  void _resetTimer() {
-    final exercise = widget.exercises[_currentIndex];
-    final match = RegExp(r'\d+').firstMatch(exercise.duration);
-    _secondsLeft = match != null ? int.parse(match.group(0)!) : 30;
+    _tracker = WorkoutTracker(
+      exercises: widget.exercises,
+      weightKg: context.read<AppState>().userWeight,
+    );
   }
 
   void _startTimer() {
@@ -322,14 +322,16 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
 
   void _tick() async {
     final id = ++_tickId;
-    while (_isRunning && !_isPaused && _secondsLeft > 0) {
+    while (_isRunning && !_isPaused && _tracker.secondsLeft > 0) {
       await Future.delayed(const Duration(seconds: 1));
       if (!mounted || id != _tickId) return;
       if (_isRunning && !_isPaused) {
-        setState(() => _secondsLeft--);
+        setState(_tracker.tick);
       }
     }
-    if (_isRunning && _secondsLeft == 0 && mounted) _nextExercise();
+    if (_isRunning && _tracker.secondsLeft == 0 && mounted) {
+      _advance(skipped: false);
+    }
   }
 
   void _pauseResume() {
@@ -337,39 +339,99 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
     if (!_isPaused) _tick();
   }
 
-  void _nextExercise() {
+  void _skip() => _advance(skipped: true);
+
+  void _advance({required bool skipped}) {
     if (_completed) return;
     _tickId++; // stop any running countdown
-    if (_currentIndex < widget.exercises.length - 1) {
-      setState(() {
-        _currentIndex++;
-        _isRunning = false;
-        _isPaused = false;
-        _resetTimer();
-      });
-    } else {
-      _workoutComplete();
+    final wasLast = _tracker.isLast;
+    setState(() {
+      skipped ? _tracker.skipCurrent() : _tracker.completeCurrent();
+      _isRunning = false;
+      _isPaused = false;
+    });
+    if (wasLast) _workoutComplete();
+  }
+
+  // ✕ / back: offer to save what was done if it's at least a minute
+  Future<void> _requestExit() async {
+    if (_completed) return;
+    if (!_tracker.canSavePartial) {
+      _tickId++;
+      Navigator.pop(context);
+      return;
     }
+    final wasPaused = _isPaused;
+    if (_isRunning) setState(() => _isPaused = true);
+    final session = _tracker.buildSession(
+      category: widget.category,
+      partial: true,
+    );
+    final end = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'End workout?',
+          style: TextStyle(
+            color: AppColors.textDark,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'You\'ve done ${session.exercisesCompleted} exercise'
+          '${session.exercisesCompleted == 1 ? '' : 's'} • '
+          '${_formatDuration(session.durationSeconds)} • '
+          '${session.caloriesBurned.toStringAsFixed(0)} cal.\n'
+          'This will be saved as a partial workout.',
+          style: const TextStyle(color: AppColors.textGrey, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'Keep going',
+              style: TextStyle(color: AppColors.textGrey),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'End & save',
+              style: TextStyle(
+                color: AppColors.sageGreen,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (end == true) {
+      _completed = true;
+      _tickId++;
+      context.read<AppState>().addWorkoutSession(session);
+      Navigator.pop(context);
+    } else if (_isRunning && !wasPaused) {
+      _pauseResume();
+    }
+  }
+
+  static String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    if (m == 0) return '${s}s';
+    return s == 0 ? '$m min' : '$m min ${s}s';
   }
 
   void _workoutComplete() {
     _completed = true;
     _isRunning = false;
-    final totalMinutes = widget.exercises.fold<int>(0, (sum, e) {
-      final match = RegExp(r'\d+').firstMatch(e.duration);
-      return sum + (match != null ? int.parse(match.group(0)!) ~/ 60 + 1 : 1);
-    });
-
-    final appState = Provider.of<AppState>(context, listen: false);
-    appState.addWorkoutSession(
-      WorkoutSession(
-        category: widget.category,
-        date: DateTime.now().toIso8601String().split('T')[0],
-        durationMinutes: totalMinutes,
-        exercisesCompleted: widget.exercises.length,
-        caloriesBurned: widget.exercises.length * 12.0,
-      ),
-    );
+    final session = _tracker.buildSession(category: widget.category);
+    final saved = session.durationSeconds >= WorkoutTracker.minSecondsToSave;
+    if (saved) context.read<AppState>().addWorkoutSession(session);
 
     showDialog(
       context: context,
@@ -377,9 +439,9 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          '🎉 Workout Complete!',
-          style: TextStyle(
+        title: Text(
+          saved ? '🎉 Workout Complete!' : 'Workout not recorded',
+          style: const TextStyle(
             color: AppColors.textDark,
             fontWeight: FontWeight.bold,
           ),
@@ -393,15 +455,20 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
                 color: AppColors.softGreen,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.emoji_events,
+              child: Icon(
+                saved ? Icons.emoji_events : Icons.timer_off_outlined,
                 color: AppColors.sageGreen,
                 size: 48,
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              '${widget.exercises.length} exercises done!\n$totalMinutes minutes  •  ${(widget.exercises.length * 12).toStringAsFixed(0)} cal',
+              saved
+                  ? '${session.exercisesCompleted} exercises done!\n'
+                        '${_formatDuration(session.durationSeconds)}  •  '
+                        '${session.caloriesBurned.toStringAsFixed(0)} cal'
+                  : 'Less than a minute of exercise was done, '
+                        'so nothing was saved.',
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppColors.textGrey, fontSize: 14),
             ),
@@ -409,11 +476,8 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
             child: const Text(
               'Back to Home',
               style: TextStyle(
@@ -430,172 +494,179 @@ class _WorkoutSessionPageState extends State<WorkoutSessionPage> {
   @override
   Widget build(BuildContext context) {
     final exercise = widget.exercises[_currentIndex];
-    final totalSeconds = () {
-      final match = RegExp(r'\d+').firstMatch(exercise.duration);
-      return match != null ? int.parse(match.group(0)!) : 30;
-    }();
+    final totalSeconds = _tracker.currentTotalSeconds;
     final progress = _secondsLeft / totalSeconds;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _requestExit();
+      },
+      child: Scaffold(
         backgroundColor: AppColors.background,
-        elevation: 0,
-        title: Text(
-          '${_currentIndex + 1} / ${widget.exercises.length}',
-          style: const TextStyle(color: AppColors.textGrey, fontSize: 16),
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          elevation: 0,
+          title: Text(
+            '${_currentIndex + 1} / ${widget.exercises.length}',
+            style: const TextStyle(color: AppColors.textGrey, fontSize: 16),
+          ),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.close, color: AppColors.textDark),
+            onPressed: _requestExit,
+          ),
         ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.textDark),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // Progress bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: (_currentIndex + 1) / widget.exercises.length,
-                backgroundColor: AppColors.border,
-                valueColor: AlwaysStoppedAnimation(widget.color),
-                minHeight: 6,
-              ),
-            ),
-            const SizedBox(height: 40),
-
-            // Exercise name
-            Text(
-              exercise.name,
-              style: const TextStyle(
-                color: AppColors.textDark,
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              exercise.reps,
-              style: TextStyle(
-                color: widget.color,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 40),
-
-            // Timer circle
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 200,
-                  height: 200,
-                  child: CircularProgressIndicator(
-                    value: progress,
-                    strokeWidth: 10,
-                    backgroundColor: AppColors.border,
-                    valueColor: AlwaysStoppedAnimation(widget.color),
-                  ),
+        body: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              // Progress bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: (_currentIndex + 1) / widget.exercises.length,
+                  backgroundColor: AppColors.border,
+                  valueColor: AlwaysStoppedAnimation(widget.color),
+                  minHeight: 6,
                 ),
-                Column(
-                  children: [
-                    Text(
-                      '$_secondsLeft',
-                      style: const TextStyle(
-                        color: AppColors.textDark,
-                        fontSize: 56,
-                        fontWeight: FontWeight.bold,
-                      ),
+              ),
+              const SizedBox(height: 40),
+
+              // Exercise name
+              Text(
+                exercise.name,
+                style: const TextStyle(
+                  color: AppColors.textDark,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                exercise.reps,
+                style: TextStyle(
+                  color: widget.color,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 40),
+
+              // Timer circle
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 200,
+                    height: 200,
+                    child: CircularProgressIndicator(
+                      value: progress,
+                      strokeWidth: 10,
+                      backgroundColor: AppColors.border,
+                      valueColor: AlwaysStoppedAnimation(widget.color),
                     ),
-                    const Text(
-                      'seconds',
-                      style: TextStyle(color: AppColors.textGrey),
+                  ),
+                  Column(
+                    children: [
+                      Text(
+                        '$_secondsLeft',
+                        style: const TextStyle(
+                          color: AppColors.textDark,
+                          fontSize: 56,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Text(
+                        'seconds',
+                        style: TextStyle(color: AppColors.textGrey),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+
+              // Muscles
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.accessibility_new,
+                      color: widget.color,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        exercise.musclesTargeted,
+                        style: const TextStyle(
+                          color: AppColors.textGrey,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            // Muscles
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.card,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
               ),
-              child: Row(
+              const Spacer(),
+
+              // Buttons
+              Row(
                 children: [
-                  Icon(Icons.accessibility_new, color: widget.color, size: 20),
-                  const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      exercise.musclesTargeted,
-                      style: const TextStyle(
-                        color: AppColors.textGrey,
-                        fontSize: 13,
+                    child: OutlinedButton(
+                      onPressed: _skip,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textGrey,
+                        side: const BorderSide(color: AppColors.border),
+                        minimumSize: const Size(0, 52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Skip'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: _isRunning ? _pauseResume : _startTimer,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: widget.color,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(0, 52),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        !_isRunning
+                            ? 'Start'
+                            : _isPaused
+                            ? 'Resume'
+                            : 'Pause',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
-            const Spacer(),
-
-            // Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _nextExercise,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textGrey,
-                      side: const BorderSide(color: AppColors.border),
-                      minimumSize: const Size(0, 52),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text('Skip'),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton(
-                    onPressed: _isRunning ? _pauseResume : _startTimer,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.color,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(0, 52),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      !_isRunning
-                          ? 'Start'
-                          : _isPaused
-                              ? 'Resume'
-                              : 'Pause',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );

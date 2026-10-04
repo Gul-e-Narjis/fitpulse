@@ -491,6 +491,34 @@ class ExerciseDataService {
     }
   }
 
+  // Seconds parsed from strings like '45 seconds'
+  static int durationSeconds(Exercise e) {
+    final match = RegExp(r'\d+').firstMatch(e.duration);
+    return match != null ? int.parse(match.group(0)!) : 30;
+  }
+
+  // Approximate MET value per category (Compendium of Physical Activities)
+  static double metFor(String category) {
+    switch (category) {
+      case 'Cardio':
+        return 8.0;
+      case 'Arm':
+        return 5.0;
+      case 'Leg':
+        return 6.0;
+      case 'Core':
+        return 4.0;
+      case 'Full Body':
+        return 8.0;
+      default:
+        return 5.0;
+    }
+  }
+
+  // kcal = MET × 3.5 × kg / 200 per minute
+  static double caloriesFor(Exercise e, int seconds, double weightKg) =>
+      metFor(e.category) * 3.5 * weightKg / 200 * (seconds / 60);
+
   static String getCategoryDuration(String category) {
     switch (category) {
       case 'Cardio':
