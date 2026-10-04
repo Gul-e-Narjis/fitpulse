@@ -1,10 +1,7 @@
-import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'app_check_config.dart';
 import 'firebase_options.dart';
 import 'theme/fp_theme.dart';
 import 'services/app_state.dart';
@@ -29,7 +26,6 @@ import 'services/exercise_data.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await _activateAppCheck();
 
   // On web the saved session is restored asynchronously — wait for it
   final user = await FirebaseAuth.instance.authStateChanges().first;
@@ -57,26 +53,6 @@ Future<void> main() async {
       ),
     ),
   );
-}
-
-// App Check protects Firebase AI Logic (the coach) from abuse.
-// Debug builds (localhost) use a debug token printed in the browser console;
-// release builds use reCAPTCHA v3 with the site key in app_check_config.dart.
-Future<void> _activateAppCheck() async {
-  if (!kIsWeb) return; // FitPulse currently ships for web only
-  try {
-    if (kDebugMode) {
-      await FirebaseAppCheck.instance.activate(providerWeb: WebDebugProvider());
-    } else if (recaptchaSiteKey.isNotEmpty) {
-      await FirebaseAppCheck.instance.activate(
-        providerWeb: ReCaptchaV3Provider(recaptchaSiteKey),
-      );
-    } else {
-      debugPrint('App Check: no reCAPTCHA site key set — AI coach will fail');
-    }
-  } catch (e) {
-    debugPrint('App Check activation failed: $e');
-  }
 }
 
 class MyApp extends StatelessWidget {

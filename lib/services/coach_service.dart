@@ -22,7 +22,8 @@ class CoachMessage {
 // Gemini via Firebase AI Logic (Gemini Developer API, free tier).
 // Conversation is stored in users/{uid}/coachChats.
 class CoachService {
-  static const modelName = 'gemini-2.5-flash';
+  // gemini-2.5-flash is closed to new projects; this is the current Flash model
+  static const modelName = 'gemini-3.8-flash';
   static const _historyLimit = 40;
 
   final AppState app;
@@ -149,18 +150,16 @@ How to respond:
 ''';
   }
 
-  // Friendly text for errors such as Firebase AI Logic not being enabled
+  // Friendly text for errors such as Firebase AI Logic not being enabled.
+  // The raw error is always logged so the real cause shows in the console.
   static String describeError(Object e) {
+    debugPrint('Coach error (${e.runtimeType}): $e');
     final msg = e.toString().toLowerCase();
-    if (msg.contains('app check') ||
-        msg.contains('appcheck') ||
-        msg.contains('app-check')) {
-      return kDebugMode
-          ? 'App Check blocked this request. Add the debug token from the '
-                'browser console in Firebase console → App Check → Manage '
-                'debug tokens, then reload.'
-          : 'This device couldn\'t be verified (App Check). Please reload '
-                'the page and try again.';
+    if (msg.contains('no longer available') ||
+        msg.contains('not found') ||
+        msg.contains('404')) {
+      return 'The coach\'s AI model is unavailable right now. '
+          'Please try again later.';
     }
     if (msg.contains('api has not been used') ||
         msg.contains('not enabled') ||

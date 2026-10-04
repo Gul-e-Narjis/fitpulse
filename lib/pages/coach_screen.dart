@@ -103,7 +103,6 @@ class _CoachScreenState extends State<CoachScreen> {
         _scrollToEnd();
       }
     } catch (e) {
-      debugPrint('Coach error: $e');
       if (!mounted) return;
       setState(() {
         _messages.add(
