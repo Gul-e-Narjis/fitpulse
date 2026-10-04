@@ -115,6 +115,41 @@ class BmiRecord {
   );
 }
 
+// ── WeightEntry model (users/{uid}/weights/{id}) ─────────────────────────────
+class WeightEntry {
+  final String id;
+  final double kg;
+  final String date; // yyyy-mm-dd
+  final int createdMs;
+
+  const WeightEntry({
+    required this.id,
+    required this.kg,
+    required this.date,
+    required this.createdMs,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'kg': kg,
+    'date': date,
+    'createdMs': createdMs,
+  };
+
+  static WeightEntry fromDoc(String id, Map<String, dynamic> m) => WeightEntry(
+    id: id,
+    kg: (m['kg'] as num).toDouble(),
+    date: m['date'] as String,
+    createdMs: (m['createdMs'] as num?)?.toInt() ?? 0,
+  );
+
+  WeightEntry copyWith({String? id, double? kg, String? date}) => WeightEntry(
+    id: id ?? this.id,
+    kg: kg ?? this.kg,
+    date: date ?? this.date,
+    createdMs: createdMs,
+  );
+}
+
 // ── AppState ──────────────────────────────────────────────────────────────────
 // All private user data lives in one Firestore document: users/{uid}.
 // A small public card (name, avatar, level, weekly XP) is mirrored to
@@ -144,9 +179,10 @@ class AppState extends ChangeNotifier {
   // ── BMI History ────────────────────────
   List<BmiRecord> _bmiHistory = [];
 
-  // ── Step Counter ───────────────────────
-  int _todaySteps = 0;
-  int _stepGoal = 10000;
+  // ── Weight ─────────────────────────────
+  List<WeightEntry> _weights = [];
+  double? _goalWeight;
+  double? _startWeight;
 
   // ── Notifications ──────────────────────
   bool _notificationsEnabled = true;
@@ -294,10 +330,26 @@ class AppState extends ChangeNotifier {
   // ── Getters — BMI History ──────────────
   List<BmiRecord> get bmiHistory => _bmiHistory;
 
-  // ── Getters — Steps ────────────────────
-  int get todaySteps => _todaySteps;
-  int get stepGoal => _stepGoal;
-  double get stepProgress => (_todaySteps / _stepGoal).clamp(0.0, 1.0);
+  // ── Getters — Weight ───────────────────
+  List<WeightEntry> get weights => _weights;
+  double? get goalWeight => _goalWeight;
+  // Onboarding weight, else the first logged entry, else the profile weight
+  double get startWeight =>
+      _startWeight ?? (_weights.isNotEmpty ? _weights.first.kg : _userWeight);
+  double get currentWeight =>
+      _weights.isNotEmpty ? _weights.last.kg : _userWeight;
+  // Positive = lost since start, negative = gained
+  double get weightChange => startWeight - currentWeight;
+  double? get weightToGo =>
+      _goalWeight == null ? null : (currentWeight - _goalWeight!).abs();
+  // 0..1 progress from start towards the goal (works for losing or gaining)
+  double get weightProgress {
+    final goal = _goalWeight;
+    if (goal == null) return 0;
+    final total = startWeight - goal;
+    if (total.abs() < 0.05) return 1;
+    return ((startWeight - currentWeight) / total).clamp(0.0, 1.0);
+  }
 
   // ── Getters — Notifications ────────────
   bool get notificationsEnabled => _notificationsEnabled;
@@ -360,6 +412,7 @@ class AppState extends ChangeNotifier {
         await _save();
       }
     }
+    await _loadWeights();
     await _ensurePublicProfile();
     notifyListeners();
   }
@@ -419,6 +472,7 @@ class AppState extends ChangeNotifier {
     _userWeight = weightKg;
     _fitnessLevel = level;
     _daysPerWeek = daysPerWeek;
+    _startWeight = weightKg;
     _onboarded = true;
     _plannedWorkouts.removeWhere((p) => p.id.startsWith('onb-'));
     _plannedWorkouts.addAll(
@@ -499,14 +553,94 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // ── Steps ──────────────────────────────
-  void updateSteps(int steps) {
-    _todaySteps = steps;
-    notifyListeners();
+  // ── Weight progress ────────────────────
+  CollectionReference<Map<String, dynamic>> get _weightsCol =>
+      _doc.collection('weights');
+
+  Future<void> _loadWeights() async {
+    if (_uid == null) return;
+    try {
+      final snap = await _weightsCol.orderBy('date').get();
+      _weights = snap.docs
+          .map((d) => WeightEntry.fromDoc(d.id, d.data()))
+          .toList();
+      _sortWeights();
+      _syncCurrentWeight();
+    } catch (e) {
+      debugPrint('Weight history load failed: $e');
+    }
   }
 
-  void setStepGoal(int goal) {
-    _stepGoal = goal;
+  void _sortWeights() => _weights.sort((a, b) {
+    final byDate = a.date.compareTo(b.date);
+    return byDate != 0 ? byDate : a.createdMs.compareTo(b.createdMs);
+  });
+
+  // The newest entry becomes the profile weight (BMI, water goal, calories)
+  void _syncCurrentWeight() {
+    if (_weights.isNotEmpty) _userWeight = _weights.last.kg;
+  }
+
+  Future<void> addWeight(double kg, DateTime date) async {
+    final entry = WeightEntry(
+      id: 'local-${DateTime.now().microsecondsSinceEpoch}',
+      kg: kg,
+      date: _dateKey(date),
+      createdMs: DateTime.now().millisecondsSinceEpoch,
+    );
+    _startWeight ??= _weights.isEmpty ? _userWeight : _weights.first.kg;
+    _weights.add(entry);
+    _sortWeights();
+    _syncCurrentWeight();
+    notifyListeners();
+    if (_uid != null) {
+      try {
+        final ref = await _weightsCol.add(entry.toMap());
+        final i = _weights.indexWhere((w) => w.id == entry.id);
+        if (i != -1) _weights[i] = entry.copyWith(id: ref.id);
+      } catch (e) {
+        debugPrint('Weight save failed: $e');
+      }
+    }
+    _save();
+  }
+
+  Future<void> updateWeight(String id, double kg, DateTime date) async {
+    final i = _weights.indexWhere((w) => w.id == id);
+    if (i == -1) return;
+    _weights[i] = _weights[i].copyWith(kg: kg, date: _dateKey(date));
+    _sortWeights();
+    _syncCurrentWeight();
+    notifyListeners();
+    if (_uid != null && !id.startsWith('local-')) {
+      try {
+        await _weightsCol
+            .doc(id)
+            .set(_weights.firstWhere((w) => w.id == id).toMap());
+      } catch (e) {
+        debugPrint('Weight update failed: $e');
+      }
+    }
+    _save();
+  }
+
+  Future<void> deleteWeight(String id) async {
+    _weights.removeWhere((w) => w.id == id);
+    _syncCurrentWeight();
+    notifyListeners();
+    if (_uid != null && !id.startsWith('local-')) {
+      try {
+        await _weightsCol.doc(id).delete();
+      } catch (e) {
+        debugPrint('Weight delete failed: $e');
+      }
+    }
+    _save();
+  }
+
+  void setGoalWeight(double kg) {
+    _goalWeight = kg;
+    _startWeight ??= startWeight;
     _save();
     notifyListeners();
   }
@@ -548,10 +682,11 @@ class AppState extends ChangeNotifier {
           'goal': _fitnessGoal,
           'level': _fitnessLevel,
           if (_daysPerWeek != null) 'daysPerWeek': _daysPerWeek,
+          if (_goalWeight != null) 'goalWeight': _goalWeight,
+          if (_startWeight != null) 'startWeight': _startWeight,
           if (_avatarSeed != null) 'avatarSeed': _avatarSeed,
         },
         'onboarded': _onboarded,
-        'stepGoal': _stepGoal,
         'notificationsEnabled': _notificationsEnabled,
         'streak': currentStreak,
         'xp': xp,
@@ -621,9 +756,10 @@ class AppState extends ChangeNotifier {
     _avatarSeed = profile['avatarSeed'] as String?;
     _fitnessLevel = profile['level'] as String? ?? 'Beginner';
     _daysPerWeek = (profile['daysPerWeek'] as num?)?.toInt();
+    _goalWeight = (profile['goalWeight'] as num?)?.toDouble();
+    _startWeight = (profile['startWeight'] as num?)?.toDouble();
     // Accounts created before onboarding existed skip it
     _onboarded = data['onboarded'] as bool? ?? true;
-    _stepGoal = (data['stepGoal'] as num?)?.toInt() ?? 10000;
     _notificationsEnabled = data['notificationsEnabled'] as bool? ?? true;
     _workoutHistory = _mapList(data['workoutHistory'], WorkoutSession.fromMap);
     _plannedWorkouts = _mapList(
@@ -660,12 +796,13 @@ class AppState extends ChangeNotifier {
     _avatarSeed = null;
     _fitnessLevel = 'Beginner';
     _daysPerWeek = null;
+    _goalWeight = null;
+    _startWeight = null;
+    _weights = [];
     _onboarded = true;
     _workoutHistory = [];
     _plannedWorkouts = [];
     _bmiHistory = [];
-    _todaySteps = 0;
-    _stepGoal = 10000;
     _notificationsEnabled = true;
     _water = {};
     _badges = {};

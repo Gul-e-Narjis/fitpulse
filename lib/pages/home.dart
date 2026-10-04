@@ -11,13 +11,13 @@ import 'profile_screen.dart';
 import 'history_screen.dart';
 import 'progress_charts.dart';
 import 'workout_planner.dart';
-import 'step_counter.dart';
 import 'notifications_screen.dart';
 import 'custom_workout.dart';
 import 'coach_screen.dart';
 import 'gamification_widgets.dart';
 import 'leaderboard_screen.dart';
 import 'water_screen.dart';
+import 'weight_screen.dart';
 
 // ── Home Wrapper ─────────────────────────────────────────────────────────────
 class Home extends StatefulWidget {
@@ -207,6 +207,8 @@ class HomeContent extends StatelessWidget {
 
       // ── Water ───────────────────────────────────
       const WaterCard(),
+      const SizedBox(height: 14),
+      const WeightCard(),
       const SizedBox(height: 26),
 
       // ── Quick access ────────────────────────────
@@ -245,10 +247,10 @@ class HomeContent extends StatelessWidget {
             () => _push(context, const WorkoutPlannerScreen()),
           ),
           _QuickToolData(
-            Icons.directions_walk_rounded,
-            'Steps',
-            FpColors.lime,
-            () => _push(context, const StepCounterScreen()),
+            Icons.monitor_weight_outlined,
+            'Weight',
+            FpColors.violet,
+            () => _push(context, const WeightScreen()),
           ),
           _QuickToolData(
             Icons.speed_rounded,

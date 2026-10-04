@@ -33,7 +33,6 @@ dependencies:
 
     # Phase 3 — new packages
   fl_chart: ^0.70.2          # Progress charts (bar + line graphs)
-  pedometer: ^4.0.1          # Step counter sensor
   shared_preferences: ^2.5.3
   provider: ^6.1.2
   firebase_core: ^4.15.0

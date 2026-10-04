@@ -17,7 +17,6 @@ import 'pages/bmi_screen.dart';
 import 'pages/history_screen.dart';
 import 'pages/progress_charts.dart';
 import 'pages/workout_planner.dart';
-import 'pages/step_counter.dart';
 import 'pages/notifications_screen.dart';
 import 'pages/custom_workout.dart';
 import 'pages/onboarding_screen.dart';
@@ -77,7 +76,6 @@ class MyApp extends StatelessWidget {
         '/bmi': (_) => const BMIScreen(),
         '/charts': (_) => const ProgressChartsScreen(),
         '/planner': (_) => const WorkoutPlannerScreen(),
-        '/steps': (_) => const StepCounterScreen(),
         '/notifications': (_) => const NotificationsScreen(),
         '/custom': (_) => const CustomWorkoutScreen(),
         '/onboarding': (_) => const OnboardingScreen(),
