@@ -8,6 +8,7 @@ import 'app_check_config.dart';
 import 'firebase_options.dart';
 import 'theme/fp_theme.dart';
 import 'services/app_state.dart';
+import 'pages/intro_screen.dart';
 import 'pages/landing.dart';
 import 'pages/login.dart';
 import 'pages/signup_screen.dart';
@@ -32,6 +33,7 @@ Future<void> main() async {
 
   // On web the saved session is restored asynchronously — wait for it
   final user = await FirebaseAuth.instance.authStateChanges().first;
+  final introSeen = user != null || await IntroScreen.hasBeenSeen();
   final appState = AppState();
   var signedIn = false;
   if (user != null) {
@@ -48,7 +50,7 @@ Future<void> main() async {
       value: appState,
       child: MyApp(
         initialRoute: !signedIn
-            ? '/landing'
+            ? (introSeen ? '/landing' : '/intro')
             : appState.needsOnboarding
             ? '/onboarding'
             : '/home',
@@ -89,6 +91,7 @@ class MyApp extends StatelessWidget {
       theme: FpTheme.dark(),
       initialRoute: initialRoute,
       routes: {
+        '/intro': (_) => const IntroScreen(),
         '/landing': (_) => const LandingPage(),
         '/login': (_) => const LoginScreen(),
         '/signup': (_) => const SignUpScreen(),

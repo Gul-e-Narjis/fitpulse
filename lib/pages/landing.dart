@@ -1,280 +1,66 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
+import '../theme/fp_theme.dart';
+import '../theme/neon.dart';
+
+// ── Auth entry: Create account / Sign in / Guest ─────────────────────────────
 class LandingPage extends StatelessWidget {
   const LandingPage({super.key});
+
+  static const _photo = 'assets/images/slide3.jpg';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkTeal,
+      backgroundColor: Neon.navy,
       body: Stack(
         children: [
-          // ── Background decorative circles ───────────
-          Positioned(
-            top: -80,
-            right: -60,
-            child: Container(
-              width: 260,
-              height: 260,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.06),
-              ),
+          const Positioned.fill(
+            child: KenBurnsImage(
+              asset: _photo,
+              panFrom: Alignment(0, -0.2),
+              panTo: Alignment(0, 0.1),
+              duration: Duration(seconds: 10),
             ),
           ),
-          Positioned(
-            top: 80,
-            right: 30,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
-              ),
-            ),
+          const Positioned.fill(
+            child: NeonScrim(topStop: 0.30, bottomStart: 0.30),
           ),
-          Positioned(
-            bottom: -40,
-            left: -40,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
-              ),
-            ),
-          ),
-
-          // ── Main Content ──────────────────────────
           SafeArea(
-            child: Column(
-              children: [
-                // Top section (teal bg)
-                Expanded(
-                  flex: 5,
-                  child: Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: LayoutBuilder(
+              builder: (context, box) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: box.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Logo icon
-                          Container(
-                            width: 90,
-                            height: 90,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.15),
-                                  blurRadius: 24,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.monitor_heart_rounded,
-                              size: 44,
-                              color: AppColors.sageGreen,
+                          const NeonLogo(size: 38)
+                              .animate()
+                              .fadeIn(duration: 700.ms)
+                              .slideY(begin: -0.2, curve: Curves.easeOutCubic),
+                          const SizedBox(height: 28),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: _CoachHud(),
                             ),
                           ),
-
+                          const Spacer(),
                           const SizedBox(height: 24),
-
-                          // App name
-                          const Text(
-                            'FITPULSE',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 30,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Your Personal Fitness Companion 💪',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.75),
-                              fontSize: 15,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-
-                          const SizedBox(height: 48),
-
-                          // Feature chips
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            alignment: WrapAlignment.center,
-                            children: const [
-                              _FeatureChip(
-                                icon: Icons.timer_outlined,
-                                label: 'Workout Timer',
-                              ),
-                              _FeatureChip(
-                                icon: Icons.bar_chart_rounded,
-                                label: 'Progress Charts',
-                              ),
-                              _FeatureChip(
-                                icon: Icons.calendar_month_rounded,
-                                label: 'Workout Planner',
-                              ),
-                              _FeatureChip(
-                                icon: Icons.directions_walk_rounded,
-                                label: 'Step Counter',
-                              ),
-                              _FeatureChip(
-                                icon: Icons.calculate_outlined,
-                                label: 'BMI Calculator',
-                              ),
-                            ],
-                          ),
+                          _AuthPanel()
+                              .animate()
+                              .fadeIn(delay: 300.ms, duration: 600.ms)
+                              .slideY(begin: 0.15, curve: Curves.easeOutCubic),
                         ],
                       ),
                     ),
                   ),
                 ),
-
-                // Bottom white card
-                Container(
-                  decoration: const BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(36),
-                      topRight: Radius.circular(36),
-                    ),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(28, 36, 28, 36),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text(
-                        'Get Started',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Join thousands achieving their fitness goals',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade500,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 28),
-
-                      // Create Account button
-                      SizedBox(
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: () =>
-                              Navigator.pushNamed(context, '/signup'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.sageGreen,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.person_add_alt_1_rounded, size: 20),
-                              SizedBox(width: 10),
-                              Text(
-                                'Create Account',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // Sign In button
-                      SizedBox(
-                        height: 56,
-                        child: OutlinedButton(
-                          onPressed: () =>
-                              Navigator.pushNamed(context, '/login'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.sageGreen,
-                            side: const BorderSide(
-                              color: AppColors.sageGreen,
-                              width: 2,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.login_rounded, size: 20),
-                              SizedBox(width: 10),
-                              Text(
-                                'Sign In',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 18),
-
-                      // Guest button
-                      GestureDetector(
-                        onTap: () => Navigator.pushNamedAndRemoveUntil(
-                          context,
-                          '/home',
-                          (route) => false,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.person_outline_rounded,
-                              size: 16,
-                              color: Colors.grey.shade400,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Continue as Guest',
-                              style: TextStyle(
-                                color: Colors.grey.shade400,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],
@@ -283,31 +69,89 @@ class LandingPage extends StatelessWidget {
   }
 }
 
-class _FeatureChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _FeatureChip({required this.icon, required this.label});
-
+class _CoachHud extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+    return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const HudCard(
+              label: 'AI COACH',
+              width: 148,
+              value: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [NeonDot(), SizedBox(width: 8), Text('ONLINE')],
+              ),
+            ),
+            // Short pointer towards the high-five
+            Container(
+              width: 46,
+              height: 1.2,
+              color: Neon.cyan.withValues(alpha: 0.75),
+            ),
+            const NeonDot(color: Neon.cyan, size: 7),
+          ],
+        )
+        .animate()
+        .fadeIn(delay: 500.ms, duration: 500.ms)
+        .scaleXY(
+          begin: 0.7,
+          delay: 500.ms,
+          curve: Curves.easeOutBack,
+          alignment: Alignment.centerLeft,
+        );
+  }
+}
+
+class _AuthPanel extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return NeonGlassPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(icon, color: Colors.white, size: 15),
-          const SizedBox(width: 6),
           Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+            'Your AI-powered fitness journey starts here',
+            textAlign: TextAlign.center,
+            style: FpText.h3(color: Colors.white),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Workouts, streaks, badges and a coach that knows you.',
+            textAlign: TextAlign.center,
+            style: FpText.body(
+              color: Colors.white.withValues(alpha: 0.7),
+              size: 13,
+            ),
+          ),
+          const SizedBox(height: 20),
+          NeonGradientButton(
+            label: 'Create Account',
+            onTap: () => Navigator.pushNamed(context, '/signup'),
+          ),
+          const SizedBox(height: 12),
+          NeonOutlineButton(
+            label: 'Sign In',
+            onTap: () => Navigator.pushNamed(context, '/login'),
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () => Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/home',
+              (r) => false,
+            ),
+            icon: Icon(
+              Icons.person_outline_rounded,
+              size: 16,
+              color: Colors.white.withValues(alpha: 0.6),
+            ),
+            label: Text(
+              'Continue as Guest',
+              style: FpText.body(
+                color: Colors.white.withValues(alpha: 0.7),
+                size: 14,
+              ),
             ),
           ),
         ],
