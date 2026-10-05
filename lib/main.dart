@@ -68,7 +68,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'FitPulse — AI Fitness Coach',
+      title: 'FitPulse',
       debugShowCheckedModeBanner: false,
       theme: FpTheme.dark(),
       navigatorKey: navigatorKey,
